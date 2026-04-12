@@ -44,13 +44,6 @@ If you want to compile the project yourself instead:
 
 ## License
 
-**Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)**
+This project is licensed under the **GNU General Public License v3.0**.
 
-You are free to:
-* **Share** - copy and redistribute the material in any medium or format
-* **Adapt** - remix, transform, and build upon the material
-
-Under the following terms:
-* **Attribution** - You must give appropriate credit.
-* **NonCommercial** - You may not use the material for commercial purposes (no monetized downloads or ad-focus links).
-* **ShareAlike** - If you remix, transform, or build upon the material, you must distribute your contributions under the same license as the original.
+You may copy, distribute and modify the software as long as you track changes/dates in source files. Any modifications to or software including (via compiler) GPL-licensed code must also be made available under the GPL along with build & install instructions.
