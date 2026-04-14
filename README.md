@@ -4,7 +4,7 @@ A companion mod for [Better Lockon](https://github.com/ShelMarow/Better-Lockon) 
 
 ![Mod Showcase](https://raw.githubusercontent.com/Seramicx/Epic-Fight-Better-Lockon-Souls-Fix/assets/lockon_showcase_small.gif)
 
-Better Lockon's movement has some pretty rough issues out of the box. In 1st person, trying to walk backwards or strafe just forces you straight into the enemy. In 3rd person, dodge rolls only go towards whoever you're locked onto, so you can never actually roll away. This mod fixes all of that and makes lock-on movement feel like a proper souls-like game.
+Better Lockon's movement has quite a few issues out of the box. In 1st person, trying to walk backwards or strafe just forces you straight into the enemy. In 3rd person, dodge rolls only go towards whoever you're locked onto, so you can never actually roll away. This mod fixes all of that and makes lock-on movement feel like a proper souls-like game.
 
 ## What it does
 
