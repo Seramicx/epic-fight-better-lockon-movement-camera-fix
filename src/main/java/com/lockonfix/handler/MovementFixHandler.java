@@ -45,6 +45,7 @@ public class MovementFixHandler {
     private static final float DEFAULT_TURN_SPEED = 0.45F;
     private static final float DEFAULT_IDLE_TURN_SPEED = 0.7F;
     private static final int DEFAULT_LOCK_ON_RANGE = 64;
+    private static final boolean DEFAULT_AUTO_FACE_TARGET = true;
 
     // Cached API
     private static EpicFightCameraAPI cachedAPI = null;
@@ -75,6 +76,11 @@ public class MovementFixHandler {
     private static int getLockOnRange() {
         try { return FixConfig.LOCK_ON_RANGE.get(); }
         catch (Exception e) { return DEFAULT_LOCK_ON_RANGE; }
+    }
+
+    private static boolean getAutoFaceTarget() {
+        try { return FixConfig.AUTO_FACE_TARGET.get(); }
+        catch (Exception e) { return DEFAULT_AUTO_FACE_TARGET; }
     }
 
     // =====================================================================
@@ -144,15 +150,12 @@ public class MovementFixHandler {
     // =====================================================================
 
     /**
-     * Check if the player is in an attack animation where movement should be blocked.
-     * Uses Epic Fight's own EntityState flags:
-     * - attacking() = player is in an attack animation
-     * - movementLocked() = the animation explicitly locks movement
-     *
-     * We suppress our movement injection when BOTH attacking AND movementLocked.
-     * DashAttackAnimation (sprint attacks) does NOT lock movement, so they still work.
+     * Check if the player is in a state where movement should be suppressed.
+     * Uses Epic Fight's EntityState.movementLocked() flag, which is set by
+     * attack animations, guard (blocking), and parry animations.
+     * Sprint/dash attacks do NOT set this flag, so they keep their momentum.
      */
-    private static boolean isAttackingWithMovementLocked(LocalPlayer player) {
+    private static boolean isMovementLocked(LocalPlayer player) {
         try {
             LocalPlayerPatch patch = EpicFightCapabilities.getLocalPlayerPatch(player);
             if (patch == null) return false;
@@ -164,6 +167,19 @@ public class MovementFixHandler {
             // should root the player), suppress our movement override.
             // Sprint/dash attacks do NOT set movementLocked, so they keep momentum.
             return state.movementLocked();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Check if the player is holding a guard/parry skill.
+     * Used to defer rotation to Better Lock On during blocking.
+     */
+    private static boolean isHoldingGuard(LocalPlayer player) {
+        try {
+            LocalPlayerPatch patch = EpicFightCapabilities.getLocalPlayerPatch(player);
+            return patch != null && patch.isHoldingAny();
         } catch (Exception e) {
             return false;
         }
@@ -229,10 +245,18 @@ public class MovementFixHandler {
             smoothedYRot = player.getYRot();
         }
 
+        // When the player is holding guard/parry and auto-facing is enabled,
+        // defer entirely to Better Lock On which handles guard-facing rotation.
+        // Keep smoothedYRot synced so the transition back to movement is seamless.
+        if (isHoldingGuard(player) && getAutoFaceTarget()) {
+            smoothedYRot = player.getYRot();
+            return;
+        }
+
         // If Epic Fight has locked movement for an attack animation, don't inject
         // any movement. This prevents sliding while attacking.
         // Sprint/dash attacks don't set movementLocked, so they keep their momentum.
-        if (isAttackingWithMovementLocked(player)) {
+        if (isMovementLocked(player)) {
             input.forwardImpulse = 0;
             input.leftImpulse = 0;
             input.up = false;
@@ -277,9 +301,12 @@ public class MovementFixHandler {
             input.right = false;
 
         } else {
-            // Standing still: face target for attacks
-            float desiredYRot = Mth.wrapDegrees(targetYaw);
-            smoothedYRot = smoothAngle(smoothedYRot, desiredYRot, idleTurnSpeed);
+            // Standing still: only auto-face target if config allows it.
+            // Otherwise hold the last movement direction so attacks go that way.
+            if (getAutoFaceTarget()) {
+                float desiredYRot = Mth.wrapDegrees(targetYaw);
+                smoothedYRot = smoothAngle(smoothedYRot, desiredYRot, idleTurnSpeed);
+            }
 
             player.setYRot(smoothedYRot);
 
@@ -317,6 +344,13 @@ public class MovementFixHandler {
 
         LivingEntity target = api.getFocusingEntity();
         if (target == null || !target.isAlive()) return;
+
+        // During guard/parry with auto-facing enabled, defer to Better Lock On.
+        // Don't overwrite the rotation it set in clientTick.
+        if (isHoldingGuard(player) && getAutoFaceTarget()) {
+            smoothedYRot = player.getYRot();
+            return;
+        }
 
         // Re-apply our tracked yRot AFTER Epic Fight's postClientTick
         // has overwritten it. Also set yRotO/yBodyRotO/yHeadRotO to prevent

@@ -1,49 +1,50 @@
 # Better Lock-On Movement Fix
 
-This is a companion mod for the [Better Lockon](https://github.com/ShelMarow/Better-Lockon) and [Epic Fight](https://github.com/Antikythera-Studios/epicfight) ecosystem in Minecraft Forge 1.20.1.
+A companion mod for [Better Lockon](https://github.com/ShelMarow/Better-Lockon) and [Epic Fight](https://github.com/Antikythera-Studios/epicfight) on Minecraft Forge 1.20.1.
 
 ![Mod Showcase](https://raw.githubusercontent.com/Seramicx/Epic-Fight-Better-Lockon-Souls-Fix/assets/lockon_showcase_small.gif)
 
-The original Better Lockon mod had several game-breaking movement bugs depending on what perspective you were playing in. If you were in 1st person, pressing S to walk backwards or A/D to strafe would actively force your character to walk forward straight into the enemy. In 3rd person, while basic movement worked, combat actions were completely broken. If you tried to use Epic Fight's dodge roll to escape, you could only roll directly towards the enemy you were locked onto. Rolling away or dodging sideways was impossible.
+Better Lockon's movement has some pretty rough issues out of the box. In 1st person, trying to walk backwards or strafe just forces you straight into the enemy. In 3rd person, dodge rolls only go towards whoever you're locked onto, so you can never actually roll away. This mod fixes all of that and makes lock-on movement feel like a proper souls-like game.
 
-This fix overhauls the movement logic to solve all these issues and brings the lock-on movement closer to traditional 3rd person souls-like action games.
+## What it does
 
-## Features and Fixes
+- **Full 360 movement and dodging** in any direction while locked on, in both 1st and 3rd person
+- **Fixes the 1st person magnetism bug** where pressing back/sideways drags you into the enemy
+- **Smooth turning** instead of the rigid 8-direction snapping
+- **Stops camera drag** from Epic Fight constantly pulling your rotation toward the target
+- **Guard and parry compatibility** with Better Lock On's auto-facing during blocking
+- **Controller support** via [Controllable](https://github.com/MrCrayfish/Controllable) for full analog stick movement
+- **Extended lock-on range** (configurable) so you can actually lock onto flying bosses
 
-* **True 360 Degree Movement & Dodging:** You can finally run and roll away from enemies. By syncing your character's actual rotation to your movement input, Epic Fight now registers your directional keys correctly. Pressing S will let you sprint or dodge roll away from the target reliably in both 1st and 3rd person.
-* **Fixes 1st Person Magnetism:** Completely removes the bug where pressing back or sideways in 1st person forces you to walk towards the target. You now have full control over your character's spacing.
-* **Smooth Turning:** Removed the rigid 8-directional angle snapping. The player now smoothly interpolates between angles when you change directions. This gives your character a much more natural curve when moving around.
-* **Kills Camera Drag:** Epic Fight has a background tick process that constantly tries to pull your character's rotation towards the target. This fix bypasses that behavior entirely so your movement direction is no longer actively fighting against the camera code.
-* **Performance Optimizations:** The movement handlers have been cleaned up and streamlined. Repeated API calls to Epic Fight are now cached completely to avoid wasting performance on fetching the camera instance every single tick.
+## Config
 
-## Configuration
+The mod creates a `lockonmovementfix-client.toml` in your config folder. Here's what you can change:
 
-The mod generates a `lockonmovementfix-client.toml` file in your main config folder. You can tune these values to fit exactly how you want it to feel:
-
-* `turnSpeed` (default: 0.45): Controls how fast your character rotates while running. Lower values give you a smoother, wider turn arc.
-* `idleTurnSpeed` (default: 0.70): Controls how fast your character turns to face the enemy when you stop moving. It is set a bit higher by default so your attacks actually land where you want them to.
+| Option | Default | What it does |
+|--------|---------|-------------|
+| `turnSpeed` | 0.45 | How fast you turn while moving. Lower = smoother, wider arcs |
+| `idleTurnSpeed` | 0.70 | How fast you turn to face the target when standing still |
+| `autoFaceTarget` | true | Auto-face the target when idle and during guard/parry. Set to false for full manual control |
+| `lockOnRange` | 64 | Max lock-on distance in blocks. Vanilla Epic Fight caps out around 16-20 |
 
 ## Requirements
 
-* Minecraft Forge 1.20.1
-* Epic Fight
-* Better Lockon
+- Minecraft Forge 1.20.1
+- Epic Fight
+- Better Lockon
 
-## Installation
+## Install
 
-You can download the latest `.jar` file directly from the [Releases](../../releases) tab on this page and drop it into your `mods` folder.
+Grab the latest jar from the [Releases](../../releases) page and drop it in your mods folder.
 
 <details>
 <summary>Building from source</summary>
 
-If you want to compile the project yourself instead:
-1. Clone the repository
-2. Run `gradlew build` in the root folder
-3. The compiled jar will show up in the `build/libs` directory
+1. Clone the repo
+2. Run `gradlew build`
+3. Jar ends up in `build/libs`
 </details>
 
 ## License
 
-This project is licensed under the **GNU General Public License v3.0**.
-
-You may copy, distribute and modify the software as long as you track changes/dates in source files. Any modifications to or software including (via compiler) GPL-licensed code must also be made available under the GPL along with build & install instructions.
+GPL-3.0. See [LICENSE](LICENSE) for details.
