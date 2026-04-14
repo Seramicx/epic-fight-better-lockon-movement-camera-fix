@@ -14,6 +14,9 @@ public class FixConfig {
     public static final ForgeConfigSpec.DoubleValue TURN_SPEED;
     public static final ForgeConfigSpec.DoubleValue IDLE_TURN_SPEED;
     
+    // Behavior
+    public static final ForgeConfigSpec.BooleanValue AUTO_FACE_TARGET;
+
     // Lock-On Range
     public static final ForgeConfigSpec.IntValue LOCK_ON_RANGE;
 
@@ -51,6 +54,20 @@ public class FixConfig {
                 )
                 .defineInRange("lockOnRange", 64, 8, 256);
         
+        builder.pop();
+
+        builder.comment("Behavior Settings").push("behavior");
+
+        AUTO_FACE_TARGET = builder
+                .comment(
+                    "Whether the player automatically faces the locked-on target when idle or blocking.",
+                    "When true (default), the player smoothly rotates toward the locked-on enemy",
+                    "while standing still, and auto-faces during blocking (guard) and parrying.",
+                    "When false, the lock-on camera still tracks the target, but the player",
+                    "holds their last movement direction and does not auto-rotate during guard/parry."
+                )
+                .define("autoFaceTarget", true);
+
         builder.pop();
 
         CLIENT_CONFIG = builder.build();
