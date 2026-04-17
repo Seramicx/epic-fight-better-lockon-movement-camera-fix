@@ -4,7 +4,7 @@ A companion mod for [Better Lockon](https://github.com/ShelMarow/Better-Lockon) 
 
 ![Mod Showcase](https://raw.githubusercontent.com/Seramicx/Epic-Fight-Better-Lockon-Souls-Fix/assets/lockon_showcase_small.gif)
 
-Better Lockon's movement has some pretty rough issues out of the box. In 1st person, trying to walk backwards or strafe just forces you straight into the enemy. In 3rd person, dodge rolls only go towards whoever you're locked onto, so you can never actually roll away. This mod fixes all of that and makes lock-on movement feel like a proper souls-like game.
+Better Lockon's movement has some pretty rough issues out of the box. In 1st person, trying to walk backwards or strafe just forces you straight into the enemy. In 3rd person, dodge rolls only go towards whoever you're locked onto, so you can never actually roll away. This mod fixes all of that and makes lock-on movement feel natural in third-person combat.
 
 ## What it does
 
@@ -13,30 +13,30 @@ Better Lockon's movement has some pretty rough issues out of the box. In 1st per
 - **Smooth turning** instead of the rigid 8-direction snapping
 - **Stops camera drag** from Epic Fight constantly pulling your rotation toward the target
 - **Guard and parry compatibility** with Better Lock On's auto-facing during blocking
-- **Controller support** via [Controllable](https://github.com/MrCrayfish/Controllable) — full analog stick movement and 360 dodge
+- **Controller support** via [Controllable](https://github.com/MrCrayfish/Controllable): full analog stick movement and 360 dodge
 - **Extended lock-on range** (configurable) so you can actually lock onto flying bosses
-- **Auto lock-on** — Elden Ring-style automatic target switching when your current target dies, with directional mouse flick to manually switch between targets
-- **Over-the-shoulder camera** — lateral + vertical camera offset in 3rd person, with shoulder swap keybind and wall collision so the camera doesn't clip through blocks
-- **Crosshair correction** — when the camera is offset, block/entity interaction aligns with where the crosshair actually points on screen
-- **Adaptive player hiding** — the player model disappears when the camera is pushed too close (e.g., backed against a wall) to prevent clipping into the model
+- **Auto lock-on**: automatic target switching when your current target dies, with directional mouse flick to manually switch between targets
+- **Over-the-shoulder camera**: lateral + vertical camera offset in 3rd person, with shoulder swap keybind and wall collision so the camera doesn't clip through blocks
+- **Crosshair correction**: when the camera is offset, block/entity interaction aligns with where the crosshair actually points on screen
+- **Adaptive player hiding**: the player model disappears when the camera is pushed too close (e.g., backed against a wall) to prevent clipping into the model
 
-You also get a **third-person shoulder-style camera** (slide it off to the side, swap which shoulder, nudge it up/down), **crosshair that lines up with what you're actually aiming at**, and that little trick where **you don't eat the whole screen** when you back into a wall — all optional, all in the config.
+You also get a **third-person shoulder-style camera** (slide it off to the side, swap which shoulder, nudge it up/down), **crosshair that lines up with what you're actually aiming at**, and that little trick where **you don't eat the whole screen** when you back into a wall. All optional, all in the config.
 
 ## Keybinds
 
 All of these live under the **Lock-On Movement Fix** category in Controls.
 
-- **Toggle Auto Lock-On** — unbound by default (bind it if you want the feature).
-- **Swap Shoulder** — defaults to **O** (feel free to rebind).
+- **Toggle Auto Lock-On**: unbound by default (bind it if you want the feature).
+- **Swap Shoulder**: defaults to **O** (feel free to rebind).
 
 ## Auto Lock-On
 
 Bind the **Toggle Auto Lock-On** key in your controls menu (unbound by default). When enabled:
 
 1. Lock onto a target normally with your existing lock-on key
-2. When that target dies, you hop to someone else that still feels fair — usually whoever's in front of you, without totally ignoring a dude glued to your back
+2. When that target dies, you hop to someone else that still feels fair: usually whoever's in front of you, without totally ignoring a dude glued to your back
 3. **Mouse flick** left or right to manually switch targets in that direction
-4. If no valid targets are in range, lock-on releases — you'll need to manually lock on again to resume auto-switching
+4. If no valid targets are in range, lock-on releases; you'll need to manually lock on again to resume auto-switching
 
 The target selection uses a forward-facing camera cone. Enemies in front of you are strongly preferred, but very close enemies slightly behind you can still be selected if their proximity outweighs the angular penalty.
 
