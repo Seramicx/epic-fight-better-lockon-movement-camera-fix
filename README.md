@@ -2,9 +2,11 @@
 
 A companion mod for [Better Lockon](https://github.com/ShelMarow/Better-Lockon) and [Epic Fight](https://github.com/Antikythera-Studios/epicfight) on Minecraft Forge 1.20.1.
 
+> **Note:** Do not use this mod alongside other camera-changing mods. This mod already implements shoulder surfing behavior.
+
 ![Mod Showcase](https://raw.githubusercontent.com/Seramicx/Epic-Fight-Better-Lockon-Souls-Fix/assets/lockon_showcase_small.gif)
 
-Better Lockon's movement has some pretty rough issues out of the box. In 1st person, trying to walk backwards or strafe just forces you straight into the enemy. In 3rd person, dodge rolls only go towards whoever you're locked onto, so you can never actually roll away. This mod fixes all of that and makes lock-on movement feel natural in third-person combat.
+Better Lockon's movement has quite a few issues out of the box. In 1st person, trying to walk backwards or strafe just forces you straight into the enemy. In 3rd person, dodge rolls only go towards whoever you're locked onto, so you can never actually roll away. This mod fixes all of that and makes lock-on movement feel like a proper souls-like game, with a togglable auto lock-on/swapping feature similar to souls games like Elden Ring and a shoulder surfing revamp to 3rd person so you can actually see what you're interacting with.
 
 ## What it does
 
@@ -17,26 +19,28 @@ Better Lockon's movement has some pretty rough issues out of the box. In 1st per
 - **Extended lock-on range** (configurable) so you can actually lock onto flying bosses
 - **Auto lock-on**: automatic target switching when your current target dies, with directional mouse flick to manually switch between targets
 - **Over-the-shoulder camera**: lateral + vertical camera offset in 3rd person, with shoulder swap keybind and wall collision so the camera doesn't clip through blocks
-- **Crosshair correction**: when the camera is offset, block/entity interaction aligns with where the crosshair actually points on screen
+- **Crosshair correction**: when the camera is offset, block/entity interaction aligns with where the crosshair actually points on screen; also accurately shows where your shot or spell will land when drawing a bow, crossbow, trident, or channeling a spell
 - **Adaptive player hiding**: the player model disappears when the camera is pushed too close (e.g., backed against a wall) to prevent clipping into the model
-
-You also get a **third-person shoulder-style camera** (slide it off to the side, swap which shoulder, nudge it up/down), **crosshair that lines up with what you're actually aiming at**, and that little trick where **you don't eat the whole screen** when you back into a wall. All optional, all in the config.
+- **Iron's Spells integration**: your character smoothly auto-faces enemies when casting spells while locked on, for both held spells and instant casts
+- **Instant spell snapping**: tapping an instant spell (like Teleport or Firebolt) in third-person instantly snaps your character's aim to the crosshair, so the spell goes exactly where you're looking instead of getting messed up by the shoulder camera angle
 
 ## Keybinds
 
 All of these live under the **Lock-On Movement Fix** category in Controls.
 
-- **Toggle Auto Lock-On**: unbound by default (bind it if you want the feature).
-- **Swap Shoulder**: defaults to **O** (feel free to rebind).
+| Keybind | Default |
+|---|---|
+| Toggle Auto Lock-On | Unbound |
+| Swap Shoulder | O |
 
 ## Auto Lock-On
 
 Bind the **Toggle Auto Lock-On** key in your controls menu (unbound by default). When enabled:
 
 1. Lock onto a target normally with your existing lock-on key
-2. When that target dies, you hop to someone else that still feels fair: usually whoever's in front of you, without totally ignoring a dude glued to your back
+2. When that target dies, you automatically switch to the next best target, usually whoever's in front of you while still accounting for enemies that are very close behind you
 3. **Mouse flick** left or right to manually switch targets in that direction
-4. If no valid targets are in range, lock-on releases; you'll need to manually lock on again to resume auto-switching
+4. If no valid targets are in range, lock-on releases and you'll need to manually lock on again to resume auto-switching
 
 The target selection uses a forward-facing camera cone. Enemies in front of you are strongly preferred, but very close enemies slightly behind you can still be selected if their proximity outweighs the angular penalty.
 
