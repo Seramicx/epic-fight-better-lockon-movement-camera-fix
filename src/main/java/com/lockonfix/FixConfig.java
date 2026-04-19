@@ -27,9 +27,13 @@ public class FixConfig {
     // Camera Offset (Over-the-Shoulder)
     public static final ForgeConfigSpec.DoubleValue CAMERA_OFFSET_X;
     public static final ForgeConfigSpec.DoubleValue CAMERA_OFFSET_Y;
+    public static final ForgeConfigSpec.DoubleValue CAMERA_OFFSET_Z;
     public static final ForgeConfigSpec.DoubleValue CAMERA_OFFSET_SMOOTHING;
     public static final ForgeConfigSpec.BooleanValue HIDE_PLAYER_WHEN_CLOSE;
     public static final ForgeConfigSpec.DoubleValue HIDE_PLAYER_DISTANCE;
+
+    /** Adaptive HUD crosshair in third person — shifts to the player's actual aim point while aiming. */
+    public static final ForgeConfigSpec.BooleanValue ADAPTIVE_CROSSHAIR;
 
     static {
         ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
@@ -109,13 +113,21 @@ public class FixConfig {
                     "Set to 0 to disable the over-the-shoulder offset.",
                     "Use the 'Swap Shoulder' keybind to flip this at runtime."
                 )
-                .defineInRange("cameraOffsetX", -0.75, -3.0, 3.0);
+                .defineInRange("cameraOffsetX", 0.75, -3.0, 3.0);
 
         CAMERA_OFFSET_Y = builder
                 .comment(
                     "Vertical camera offset in blocks. Positive = higher, Negative = lower."
                 )
                 .defineInRange("cameraOffsetY", 0.15, -2.0, 2.0);
+
+        CAMERA_OFFSET_Z = builder
+                .comment(
+                    "Forward/Backward camera offset in blocks (Zoom).",
+                    "Positive = further away (closer to player), Negative = further back (away from player).",
+                    "Set to 0 to use the vanilla distance calculation."
+                )
+                .defineInRange("cameraOffsetZ", 0.0, -4.0, 4.0);
 
         CAMERA_OFFSET_SMOOTHING = builder
                 .comment(
@@ -137,6 +149,18 @@ public class FixConfig {
                     "Only applies when hidePlayerWhenClose is true."
                 )
                 .defineInRange("hidePlayerDistance", 0.8, 0.1, 3.0);
+
+        builder.pop();
+
+        builder.comment("Adaptive crosshair (third person, Epic Fight lock-off)").push("crosshair");
+
+        ADAPTIVE_CROSSHAIR = builder
+                .comment(
+                    "Move the third-person crosshair to where the player is actually aiming while drawing a bow/crossbow/trident or casting an Iron's Spells spell.",
+                    "Traces from the player's eye along the player's view vector — the camera stays put, only the crosshair shifts.",
+                    "Disabled while Epic Fight lock-on targeting is active."
+                )
+                .define("adaptiveCrosshair", true);
 
         builder.pop();
 
