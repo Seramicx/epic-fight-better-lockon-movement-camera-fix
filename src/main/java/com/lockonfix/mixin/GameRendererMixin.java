@@ -8,25 +8,19 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
-import yesman.epicfight.api.client.camera.EpicFightCameraAPI;
+import com.lockonfix.client.EpicFightClientHooks;
 
 import java.util.function.Predicate;
 
 @Mixin(GameRenderer.class)
 public abstract class GameRendererMixin {
-
-    private boolean isLockedOn() {
-        try {
-            EpicFightCameraAPI api = EpicFightCameraAPI.getInstance();
-            return api != null && api.isLockingOnTarget();
-        } catch (Exception e) {
-            return false;
-        }
-    }
 
     @Redirect(
         method = "pick",
@@ -37,26 +31,30 @@ public abstract class GameRendererMixin {
     )
     private EntityHitResult redirectGetEntityHitResult(Entity shooter, Vec3 startPos, Vec3 endPos, AABB boundingBox, Predicate<Entity> filter, double interactionRangeSq) {
         Minecraft mc = Minecraft.getInstance();
-        
-        if (mc.player != null && shooter == mc.player && mc.options.getCameraType() == CameraType.THIRD_PERSON_BACK && !isLockedOn()) {
-            // Over-the-shoulder perspective: Trace from camera instead of player eyes
+
+        if (mc.player != null && shooter == mc.player && mc.options.getCameraType() == CameraType.THIRD_PERSON_BACK && !EpicFightClientHooks.isLockOnTargeting()) {
             Camera camera = mc.gameRenderer.getMainCamera();
             Vec3 cameraPos = camera.getPosition();
             Vec3 lookVec = new Vec3(camera.getLookVector());
-            double interactionRange = Math.sqrt(interactionRangeSq);
-            
-            // The interaction range must be increased to account for the camera being further back than the player
+
             float partialTick = mc.getFrameTime();
-            double distance = interactionRange + cameraPos.distanceTo(shooter.getEyePosition(partialTick));
-            Vec3 cameraEndPos = cameraPos.add(lookVec.scale(distance));
-            
-            // The interactionRangeSq here still needs to be the expanded square
-            double newInteractionRangeSq = distance * distance;
-            
-            // Inflate search box from camera position to ensure entities are found correctly
-            AABB searchBox = new AABB(cameraPos, cameraEndPos).inflate(1.0);
-            
-            return ProjectileUtil.getEntityHitResult(shooter, cameraPos, cameraEndPos, searchBox, filter, newInteractionRangeSq);
+            double eyeToCameraDist = cameraPos.distanceTo(shooter.getEyePosition(partialTick));
+            double interactionRange = Math.sqrt(interactionRangeSq);
+            double totalTraceDist = interactionRange + eyeToCameraDist;
+
+            Vec3 cameraEndPos = cameraPos.add(lookVec.scale(totalTraceDist));
+
+            // Perform block clip from camera to find world target
+            BlockHitResult blockHit = shooter.level().clip(new ClipContext(
+                cameraPos, cameraEndPos, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, shooter
+            ));
+
+            Vec3 worldTargetPos = blockHit.getType() != HitResult.Type.MISS ? blockHit.getLocation() : cameraEndPos;
+            double distToWorldTarget = worldTargetPos.distanceTo(cameraPos);
+
+            // Now trace entities between camera and the world target
+            AABB searchBox = new AABB(cameraPos, worldTargetPos).inflate(1.0);
+            return ProjectileUtil.getEntityHitResult(shooter, cameraPos, worldTargetPos, searchBox, filter, distToWorldTarget * distToWorldTarget);
         }
         
         // Vanilla fallback

@@ -7,8 +7,8 @@
   "mixins": [
   ],
   "client": [
-    "EntityMixin",
-    "GameRendererMixin"
+    "GameRendererMixin",
+    "PlayerMixin"
   ],
   "injectors": {
     "defaultRequire": 1

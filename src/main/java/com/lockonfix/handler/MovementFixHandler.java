@@ -2,6 +2,7 @@ package com.lockonfix.handler;
 
 import com.lockonfix.FixConfig;
 import com.lockonfix.LockOnMovementFix;
+import com.lockonfix.client.EpicFightClientHooks;
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.Input;
@@ -185,6 +186,15 @@ public class MovementFixHandler {
         }
     }
 
+    /**
+     * Check if the player is in a state where they should auto-face the target.
+     * Covers: Guarding, Parrying, Casting Spells, and Using Projectile Items (Bows, etc).
+     */
+    private static boolean shouldAutoFaceTarget(LocalPlayer player) {
+        if (isHoldingGuard(player)) return true;
+        return EpicFightClientHooks.isAiming(player);
+    }
+
     // =====================================================================
     // Input reading — keyboard + controller fallback
     // =====================================================================
@@ -209,6 +219,10 @@ public class MovementFixHandler {
         if (rawForward == 0 && rawStrafe == 0) {
             rawForward = input.forwardImpulse;
             rawStrafe = input.leftImpulse;
+
+            // Fix for Controllable/Joystick: if we have impulses but keyboard is idle,
+            // we should still treat it as moving even if the impulses are very small
+            // but above a deadzone. Controllable sets impulses directly.
         }
 
         return new float[]{rawForward, rawStrafe};
@@ -245,10 +259,10 @@ public class MovementFixHandler {
             smoothedYRot = player.getYRot();
         }
 
-        // When the player is holding guard/parry and auto-facing is enabled,
-        // defer entirely to Better Lock On which handles guard-facing rotation.
+        // When the player is in an auto-face state (guard, bow, spell) and auto-facing is enabled,
+        // defer entirely to the logic that handles facing.
         // Keep smoothedYRot synced so the transition back to movement is seamless.
-        if (isHoldingGuard(player) && getAutoFaceTarget()) {
+        if (shouldAutoFaceTarget(player) && getAutoFaceTarget()) {
             smoothedYRot = player.getYRot();
             return;
         }
@@ -272,7 +286,10 @@ public class MovementFixHandler {
         float rawStrafe = dir[1];
 
         float targetYaw = getYawToTarget(player, target);
-        boolean isMoving = rawForward != 0 || rawStrafe != 0;
+
+        // CONTROLLABLE FIX: Use impulses directly for movement detection to support joysticks.
+        // Controllable might not trigger vanilla keybindings but it sets impulses.
+        boolean isMoving = Math.abs(rawForward) > 0.01F || Math.abs(rawStrafe) > 0.01F;
 
         float turnSpeed = getTurnSpeed();
         float idleTurnSpeed = getIdleTurnSpeed();
@@ -286,10 +303,11 @@ public class MovementFixHandler {
             player.setYRot(smoothedYRot);
 
             // Impulse trick: rotate yRot to face movement direction, then set all
-            // movement as "forward" at that angle. Booleans must be consistent with
-            // the impulse values — contradictory state (up=true + down=true) breaks
-            // EF's MovementDirection.vertical() and other systems.
-            float speed = input.shiftKeyDown ? 0.3F : 1.0F;
+            // movement as "forward" at that angle.
+            // CONTROLLABLE FIX: Maintain the magnitude of the input for analog movement.
+            float magnitude = Mth.sqrt(rawForward * rawForward + rawStrafe * rawStrafe);
+            float speed = input.shiftKeyDown ? magnitude * 0.3F : magnitude;
+
             input.forwardImpulse = speed;
             input.leftImpulse = 0;
             input.up = true;
@@ -342,9 +360,9 @@ public class MovementFixHandler {
         LivingEntity target = api.getFocusingEntity();
         if (target == null || !target.isAlive()) return;
 
-        // During guard/parry with auto-facing enabled, defer to Better Lock On.
-        // Don't overwrite the rotation it set in clientTick.
-        if (isHoldingGuard(player) && getAutoFaceTarget()) {
+        // During auto-face states (guard, bow, spell) with auto-facing enabled,
+        // don't overwrite the rotation set in clientTick.
+        if (shouldAutoFaceTarget(player) && getAutoFaceTarget()) {
             smoothedYRot = player.getYRot();
             return;
         }
