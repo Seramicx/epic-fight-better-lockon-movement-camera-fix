@@ -1,4 +1,4 @@
-# Better Lock-On Movement Fix
+# Better Third Person & QOL Fixes
 
 A companion mod for [Better Lockon](https://github.com/ShelMarow/Better-Lockon) and [Epic Fight](https://github.com/Antikythera-Studios/epicfight) on Minecraft Forge 1.20.1.
 
