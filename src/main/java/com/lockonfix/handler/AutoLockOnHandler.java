@@ -2,6 +2,9 @@ package com.lockonfix.handler;
 
 import com.lockonfix.FixConfig;
 import com.lockonfix.LockOnMovementFix;
+import com.lockonfix.compat.ControllableIntegration;
+import com.lockonfix.compat.FTBTeamsIntegration;
+import com.lockonfix.compat.IntegrationRegistry;
 import com.mojang.logging.LogUtils;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -28,16 +31,16 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
 /**
- * Elden Ring-style auto lock-on: when the current target dies, automatically
- * selects the next best target using cone-based scoring. Mouse flick switches
+ * Elden Ring-style auto lock-on. When the current target dies, picks the next
+ * best target using cone-based scoring. A mouse or right-stick flick switches
  * targets directionally. Toggled via a configurable keybind.
  *
- * Flick uses raw {@link MouseHandler} cursor deltas read in {@link TickEvent.Phase#START}
- * so we do not read {@link LocalPlayer#getYRot()} (MovementFixHandler rewrites yaw every
- * tick while locked on, which falsely looked like constant mouse flicks).
+ * <p>Flick reads raw cursor deltas at {@link TickEvent.Phase#START}, not
+ * {@link LocalPlayer#getYRot()}, because LockOnMovementHandler rewrites yaw
+ * every tick while locked on (which read as constant mouse flicks).
  *
- * Integration with Epic Fight is done via its public camera API plus reflection
- * for the private setFocusingEntity/sendTargeting methods. No mixins needed.
+ * <p>Integrates with Epic Fight via its public camera API plus reflection
+ * for the private {@code setFocusingEntity}/{@code sendTargeting} methods.
  */
 @Mod.EventBusSubscriber(modid = LockOnMovementFix.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
 public class AutoLockOnHandler {
@@ -51,7 +54,7 @@ public class AutoLockOnHandler {
 
     private static boolean autoLockOnEnabled = false;
 
-    /** Track lock-on state across ticks — only used for death detection */
+    /** Track lock-on state across ticks; only used for death detection */
     private static boolean wasLockedOn = false;
     private static LivingEntity lastKnownTarget = null;
 
@@ -122,6 +125,11 @@ public class AutoLockOnHandler {
         catch (Exception e) { return true; }
     }
 
+    private static boolean getFilterFtbAllies() {
+        try { return FixConfig.FILTER_FTB_ALLIES_FROM_AUTO_LOCKON.get(); }
+        catch (Exception e) { return true; }
+    }
+
     private static double getFlickSensitivity() {
         try { return FixConfig.FLICK_SENSITIVITY.get(); }
         catch (Exception e) { return 15.0; }
@@ -157,7 +165,7 @@ public class AutoLockOnHandler {
     }
 
     // =====================================================================
-    // Main tick handler — START: mouse flick; END: death, toggle, state
+    // Main tick handler. START: flick detection; END: death, toggle, state
     // =====================================================================
 
     @SubscribeEvent
@@ -196,7 +204,10 @@ public class AutoLockOnHandler {
                 }
 
                 if (targetDead) {
-                    handleTargetLost(api);
+                    // BLO has its own death auto-switch; don't race it.
+                    if (!IntegrationRegistry.isBetterLockOn()) {
+                        handleTargetLost(api);
+                    }
                 }
             }
 
@@ -277,7 +288,7 @@ public class AutoLockOnHandler {
                 return;
             } catch (NoSuchFieldException ignored) {}
         }
-        LOGGER.error("Auto lock-on: could not resolve MouseHandler horizontal cursor delta field — flick switching disabled");
+        LOGGER.error("Auto lock-on: could not resolve MouseHandler horizontal cursor delta field; flick switching disabled");
     }
 
     private static double readMouseAccumDx() {
@@ -328,8 +339,15 @@ public class AutoLockOnHandler {
         double dx = readMouseAccumDx();
         double degreesApprox = mouseDxToYawDegrees(dx);
 
-        if (Math.abs(degreesApprox) >= MIN_TICK_DELTA_DEGREES) {
-            flickAccum += degreesApprox;
+        // Controllable's right-stick writes to mc.player.turn directly, never
+        // touching MouseHandler.accumulatedDX. Read its per-frame yaw delta
+        // (degrees, signed) and fold it into the same accumulator so flick
+        // targeting works on controller. No-op when Controllable absent.
+        double stickDegrees = ControllableIntegration.getCameraYawDelta();
+        double tickDegrees = degreesApprox + stickDegrees;
+
+        if (Math.abs(tickDegrees) >= MIN_TICK_DELTA_DEGREES) {
+            flickAccum += tickDegrees;
         } else {
             flickAccum *= 0.3;
         }
@@ -388,7 +406,16 @@ public class AutoLockOnHandler {
             if (!living.isAlive() || living.isRemoved() || living.isSpectator()) continue;
             if (!living.isPickable()) continue;
             if (living.isInvisibleTo(player)) continue;
-            if (getFilterPlayers() && living instanceof Player) continue;
+            if (living instanceof Player playerTarget) {
+                if (getFilterPlayers()) continue;
+                if (getFilterFtbAllies()) {
+                    // Vanilla Scoreboard team check (always available).
+                    if (player.isAlliedTo(playerTarget)) continue;
+                    // FTB Teams check (only when installed).
+                    if (IntegrationRegistry.isFtbTeams()
+                            && FTBTeamsIntegration.isAllyOrSameTeam(playerTarget)) continue;
+                }
+            }
 
             double dist = player.distanceTo(living);
             if (dist > maxRange) continue;
@@ -462,14 +489,14 @@ public class AutoLockOnHandler {
             focusingEntityField = EpicFightCameraAPI.class.getDeclaredField("focusingEntity");
             focusingEntityField.setAccessible(true);
         } catch (Exception e) {
-            LOGGER.error("Auto lock-on: cannot access focusingEntity field — auto target switching disabled: {}", e.getMessage());
+            LOGGER.error("Auto lock-on: cannot access focusingEntity field; auto target switching disabled: {}", e.getMessage());
         }
 
         try {
             sendTargetingMethod = EpicFightCameraAPI.class.getDeclaredMethod("sendTargeting", LivingEntity.class);
             sendTargetingMethod.setAccessible(true);
         } catch (Exception e) {
-            LOGGER.error("Auto lock-on: cannot access sendTargeting method — server sync disabled: {}", e.getMessage());
+            LOGGER.error("Auto lock-on: cannot access sendTargeting method; server sync disabled: {}", e.getMessage());
         }
     }
 

@@ -13,6 +13,7 @@ public class FixConfig {
     // Movement
     public static final ForgeConfigSpec.DoubleValue TURN_SPEED;
     public static final ForgeConfigSpec.DoubleValue IDLE_TURN_SPEED;
+    public static final ForgeConfigSpec.DoubleValue MOUNT_TURN_SPEED;
     
     // Behavior
     public static final ForgeConfigSpec.BooleanValue AUTO_FACE_TARGET;
@@ -32,8 +33,17 @@ public class FixConfig {
     public static final ForgeConfigSpec.BooleanValue HIDE_PLAYER_WHEN_CLOSE;
     public static final ForgeConfigSpec.DoubleValue HIDE_PLAYER_DISTANCE;
 
-    /** Adaptive HUD crosshair in third person — shifts to the player's actual aim point while aiming. */
-    public static final ForgeConfigSpec.BooleanValue ADAPTIVE_CROSSHAIR;
+    // Shoulder overhead preset
+    public static final ForgeConfigSpec.DoubleValue CAMERA_OVERHEAD_OFFSET_Y;
+    public static final ForgeConfigSpec.EnumValue<ShoulderPreset> DEFAULT_SHOULDER_PRESET;
+
+    // Look-down camera centering (pillar-up assist)
+    public static final ForgeConfigSpec.DoubleValue CAMERA_LOOK_DOWN_CENTER_ANGLE;
+
+    public enum ShoulderPreset { RIGHT, LEFT, OVERHEAD }
+
+    // FTB Teams ally filter
+    public static final ForgeConfigSpec.BooleanValue FILTER_FTB_ALLIES_FROM_AUTO_LOCKON;
 
     static {
         ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
@@ -55,7 +65,17 @@ public class FixConfig {
                     "0.5 = smooth, 0.8 = fast, 1.0 = instant."
                 )
                 .defineInRange("idleTurnSpeed", 0.7, 0.05, 1.0);
-        
+
+        MOUNT_TURN_SPEED = builder
+                .comment(
+                    "Per-tick turn factor used while riding a mount (horse, pig, strider, etc.).",
+                    "Applies to BOTH the lock-on auto-rotation AND the not-locked-on mount-rotate",
+                    "(camera-decoupled steering). Lower than turnSpeed by default because mount yaw",
+                    "drives a bigger visible model and large per-tick steps look stiff.",
+                    "0.15 = very smooth, 0.25 = balanced, 0.5 = snappy."
+                )
+                .defineInRange("mountTurnSpeed", 0.25, 0.05, 1.0);
+
         builder.pop();
 
         builder.comment("Lock-On Range Settings").push("lockOnRange");
@@ -101,7 +121,7 @@ public class FixConfig {
                     "Lower = more sensitive (easier to switch), Higher = harder to trigger.",
                     "Only applies when auto lock-on is active."
                 )
-                .defineInRange("flickSensitivity", 15.0, 5.0, 45.0);
+                .defineInRange("flickSensitivity", 8.0, 3.0, 45.0);
 
         builder.pop();
 
@@ -150,17 +170,41 @@ public class FixConfig {
                 )
                 .defineInRange("hidePlayerDistance", 0.8, 0.1, 3.0);
 
+        CAMERA_OVERHEAD_OFFSET_Y = builder
+                .comment(
+                    "Vertical offset for the 'overhead' shoulder preset (3rd tap of the Swap Shoulder keybind).",
+                    "Positive = camera higher above the player, so the player appears below screen center and the crosshair sits above their head.",
+                    "Modeled after Leawind's Third Person overhead crosshair."
+                )
+                .defineInRange("cameraOverheadOffsetY", 1.2, -2.0, 4.0);
+
+        DEFAULT_SHOULDER_PRESET = builder
+                .comment(
+                    "Which shoulder preset the Swap Shoulder cycle starts on each session.",
+                    "Cycle order is RIGHT -> LEFT -> OVERHEAD -> RIGHT regardless of starting point."
+                )
+                .defineEnum("defaultShoulderPreset", ShoulderPreset.RIGHT);
+
+        CAMERA_LOOK_DOWN_CENTER_ANGLE = builder
+                .comment(
+                    "Angle (degrees from straight down) below which the camera lateral and vertical offsets",
+                    "collapse to 0, centering the camera directly above the player so you can build downward",
+                    "and pillar up easily. The existing camera offset smoothing handles the transition.",
+                    "Set to 0 to disable."
+                )
+                .defineInRange("cameraLookDownCenterAngle", 5.0, 0.0, 90.0);
+
         builder.pop();
 
-        builder.comment("Adaptive crosshair (third person, Epic Fight lock-off)").push("crosshair");
+        builder.comment("Auto Lock-On: team / ally filter (vanilla Scoreboard teams + FTB Teams when installed)").push("teamFilter");
 
-        ADAPTIVE_CROSSHAIR = builder
+        FILTER_FTB_ALLIES_FROM_AUTO_LOCKON = builder
                 .comment(
-                    "Move the third-person crosshair to where the player is actually aiming while drawing a bow/crossbow/trident or casting an Iron's Spells spell.",
-                    "Traces from the player's eye along the player's view vector — the camera stays put, only the crosshair shifts.",
-                    "Disabled while Epic Fight lock-on targeting is active."
+                    "Never auto-lock onto teammates or allies. Covers vanilla Scoreboard teams (/team) and",
+                    "FTB Teams (when installed). For FTB, anyone ranked Ally or higher is excluded.",
+                    "This runs in addition to filterPlayersFromAutoLockOn. With that flag off, non-ally players can still be targeted."
                 )
-                .define("adaptiveCrosshair", true);
+                .define("filterTeamAllies", true);
 
         builder.pop();
 

@@ -5,9 +5,19 @@
   "refmap": "lockonmovementfix.refmap.json",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
+    "DodgeSkillMixin",
+    "MixinEntityTurnDecouple",
+    "MixinLivingEntityRiddenInterp"
   ],
   "client": [
     "GameRendererMixin",
+    "MixinCameraDecouple",
+    "MixinControllableCameraTurn",
+    "MixinLevelRendererForVsCamera",
+    "MixinLocalPlayerInputOverride",
+    "MixinMinecraft",
+    "MixinMouseHandlerProcessing",
+    "MixinMultiPlayerGameMode",
     "PlayerMixin"
   ],
   "injectors": {
