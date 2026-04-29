@@ -1,13 +1,19 @@
 package com.lockonfix;
 
+import com.lockonfix.compat.EpicFightTPSDecoupleHook;
+import com.lockonfix.compat.IntegrationRegistry;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.KeyMapping;
+import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
+import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
+import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
@@ -24,10 +30,22 @@ public class LockOnMovementFix {
     public LockOnMovementFix(FMLJavaModLoadingContext context) {
         context.registerConfig(ModConfig.Type.CLIENT, FixConfig.CLIENT_CONFIG, "lockonmovementfix-client.toml");
 
+        context.getModEventBus().addListener(this::onCommonSetup);
+        context.getModEventBus().addListener(this::onClientSetup);
         context.getModEventBus().addListener(this::onRegisterKeyMappings);
 
         MinecraftForge.EVENT_BUS.register(this);
         LOGGER.info("Lock-On Movement Fix loaded! Souls-like lock-on movement enabled.");
+    }
+
+    private void onCommonSetup(FMLCommonSetupEvent event) {
+        IntegrationRegistry.resolve();
+    }
+
+    private void onClientSetup(FMLClientSetupEvent event) {
+        // Epic Fight's client-only camera event hooks must be registered on
+        // the client thread.
+        event.enqueueWork(EpicFightTPSDecoupleHook::register);
     }
 
     private void onRegisterKeyMappings(RegisterKeyMappingsEvent event) {
