@@ -110,4 +110,4 @@ Grab the latest jar from the [Releases](../../releases) page and drop it in your
 
 ## License
 
-GPL-3.0. See [LICENSE](LICENSE) for details.
+MIT. See [LICENSE](LICENSE) for details.
