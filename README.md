@@ -18,7 +18,7 @@ Better Lockon's movement has quite a few issues out of the box. In 1st person, t
 ### Combat
 - **Stops camera drag** from Epic Fight constantly pulling your rotation toward the target
 - **Guard and parry compatibility**: auto-faces the locked-on enemy when blocking with a shield
-- **Bow/crossbow/trident aim correction**: arrows fire where the 3rd person crosshair actually points, accounting for shoulder offset parallax. No adaptive crosshair mod needed
+- **Bow/crossbow/trident aim correction**: arrows fire where the 3rd person crosshair actually points, accounting for shoulder offset parallax. No adaptive crosshair needed
 - **Iron's Spells aim correction**: spells fire toward the crosshair (free aim) or the locked-on target, for instant cast, held cast, quick cast, and spell book keybinds. No adaptive crosshair needed
 - **Quick cast auto-face**: when casting via quick cast or tapping right click while locked on, the spell fires at the lock-on target instead of wherever the body happens to be facing
 
