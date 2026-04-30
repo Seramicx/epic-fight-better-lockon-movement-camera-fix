@@ -17,6 +17,7 @@ public final class IntegrationRegistry {
     private static boolean controllable;
     private static boolean ftbTeams;
     private static boolean valkyrienSkies;
+    private static boolean bossesRise;
     private static boolean resolved = false;
 
     private IntegrationRegistry() {}
@@ -32,10 +33,11 @@ public final class IntegrationRegistry {
         controllable    = mods.isLoaded("controllable");
         ftbTeams        = mods.isLoaded("ftbteams");
         valkyrienSkies  = mods.isLoaded("valkyrienskies");
+        bossesRise      = mods.isLoaded("block_factorys_bosses");
 
         LOGGER.info(
-            "Companion mods: BLO:{} epicfight_extra:{} IronsSpells:{} Controllable:{} FTBTeams:{} VS2:{}",
-            betterLockOn, epicFightExtra, ironsSpells, controllable, ftbTeams, valkyrienSkies);
+            "Companion mods: BLO:{} epicfight_extra:{} IronsSpells:{} Controllable:{} FTBTeams:{} VS2:{} BossesRise:{}",
+            betterLockOn, epicFightExtra, ironsSpells, controllable, ftbTeams, valkyrienSkies, bossesRise);
     }
 
     public static boolean isBetterLockOn()     { return resolved && betterLockOn; }
@@ -44,4 +46,5 @@ public final class IntegrationRegistry {
     public static boolean isControllable()     { return resolved && controllable; }
     public static boolean isFtbTeams()         { return resolved && ftbTeams; }
     public static boolean isValkyrienSkies()   { return resolved && valkyrienSkies; }
+    public static boolean isBossesRise()       { return resolved && bossesRise; }
 }

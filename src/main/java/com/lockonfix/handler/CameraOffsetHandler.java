@@ -121,23 +121,39 @@ public class CameraOffsetHandler {
         if (reflectionAttempted) return;
         reflectionAttempted = true;
 
-        // Strategy 1: Find Camera fields by type.
+        // Strategy 1: resolve Camera.position by name (mojang/parchment, then SRG).
+        // Iterating fields by type alone collides with mod mixins that add Vec3 fields
+        // to Camera (e.g. block_factorys_bosses' bosses_rise_java$pos for cinematic mode):
+        // getDeclaredFields() ordering is undefined, so a type-iteration loop can pick
+        // the mixin synthetic instead of vanilla position and the offset gets written
+        // to a field nobody reads.
+        cameraPositionField = findFieldByName(Camera.class, Vec3.class, "position", "f_90553_");
+        if (cameraPositionField != null) {
+            LOGGER.info("CameraOffsetHandler: Found Camera position field '{}' by name", cameraPositionField.getName());
+        }
+
+        cameraBlockPositionField = findFieldByName(Camera.class, BlockPos.MutableBlockPos.class, "blockPosition", "f_90555_");
+        if (cameraBlockPositionField != null) {
+            LOGGER.info("CameraOffsetHandler: Found Camera blockPosition field '{}' by name", cameraBlockPositionField.getName());
+        }
+
+        // Strategy 2: type-iteration fallback. Skip any field whose name contains '$' —
+        // mixin-injected synthetics universally include '$' (e.g. bosses_rise_java$pos);
+        // vanilla MC fields never do.
         for (Field f : Camera.class.getDeclaredFields()) {
-            // Camera has exactly one Vec3 field (its position).
-            if (f.getType() == Vec3.class) {
+            if (f.getName().indexOf('$') >= 0) continue;
+            if (cameraPositionField == null && f.getType() == Vec3.class) {
                 f.setAccessible(true);
                 cameraPositionField = f;
-                LOGGER.info("CameraOffsetHandler: Found Camera position field '{}'", f.getName());
-            }
-            // Camera has a MutableBlockPos field for its block position.
-            else if (f.getType() == BlockPos.MutableBlockPos.class) {
+                LOGGER.info("CameraOffsetHandler: Found Camera position field '{}' by type fallback", f.getName());
+            } else if (cameraBlockPositionField == null && f.getType() == BlockPos.MutableBlockPos.class) {
                 f.setAccessible(true);
                 cameraBlockPositionField = f;
-                LOGGER.info("CameraOffsetHandler: Found Camera blockPosition field '{}'", f.getName());
+                LOGGER.info("CameraOffsetHandler: Found Camera blockPosition field '{}' by type fallback", f.getName());
             }
         }
 
-        // Strategy 2: Find Camera.checkInFluid() by signature.
+        // Strategy 3: Find Camera.checkInFluid() by signature.
         for (Method m : Camera.class.getDeclaredMethods()) {
             if (m.getReturnType() == void.class && m.getParameterCount() == 0) {
                 String name = m.getName();
@@ -149,8 +165,10 @@ public class CameraOffsetHandler {
             }
         }
 
-        // Strategy 3: Find Camera.move(double, double, double) by signature.
+        // Strategy 4: Find Camera.move(double, double, double) by signature.
+        // Skip mixin-synthetic methods (names containing '$').
         for (Method m : Camera.class.getDeclaredMethods()) {
+            if (m.getName().indexOf('$') >= 0) continue;
             Class<?>[] params = m.getParameterTypes();
             if (params.length == 3
                     && params[0] == double.class
@@ -166,6 +184,19 @@ public class CameraOffsetHandler {
         if (cameraPositionField == null && cameraMoveMethod == null) {
             LOGGER.error("CameraOffsetHandler: could not find Camera position field or move method, offset disabled");
         }
+    }
+
+    /** Look up a declared field by name from a list of candidates and verify its type. */
+    private static Field findFieldByName(Class<?> clazz, Class<?> expectedType, String... names) {
+        for (String name : names) {
+            try {
+                Field f = clazz.getDeclaredField(name);
+                if (f.getType() != expectedType) continue;
+                f.setAccessible(true);
+                return f;
+            } catch (NoSuchFieldException ignored) {}
+        }
+        return null;
     }
 
     /**
