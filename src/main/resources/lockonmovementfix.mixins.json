@@ -11,8 +11,12 @@
   ],
   "client": [
     "GameRendererMixin",
+    "MixinBossesRiseRollDirection",
+    "MixinBossesRiseRollPreserveCamera",
+    "MixinBossesRiseRollVanillaRender",
     "MixinCameraDecouple",
     "MixinControllableCameraTurn",
+    "MixinFixAttackLungeDirection",
     "MixinLevelRendererForVsCamera",
     "MixinLocalPlayerInputOverride",
     "MixinMinecraft",
