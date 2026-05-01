@@ -25,3 +25,13 @@ Thumbs.db
 
 # IDE / build output
 bin/
+
+# Debug scripts and scratch work
+*.py
+*.patch
+*.sh
+docs/
+investigation_extracted/
+raw/
+release-notes-*.md
+minimal_logo.svg

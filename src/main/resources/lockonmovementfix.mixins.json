@@ -5,24 +5,15 @@
   "refmap": "lockonmovementfix.refmap.json",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
-    "DodgeSkillMixin",
-    "MixinEntityTurnDecouple",
-    "MixinLivingEntityRiddenInterp"
+    "DodgeSkillMixin"
   ],
   "client": [
-    "GameRendererMixin",
     "MixinBossesRiseRollDirection",
     "MixinBossesRiseRollPreserveCamera",
     "MixinBossesRiseRollVanillaRender",
-    "MixinCameraDecouple",
-    "MixinControllableCameraTurn",
     "MixinFixAttackLungeDirection",
-    "MixinLevelRendererForVsCamera",
-    "MixinLocalPlayerInputOverride",
     "MixinMinecraft",
-    "MixinMouseHandlerProcessing",
-    "MixinMultiPlayerGameMode",
-    "PlayerMixin"
+    "MixinMultiPlayerGameMode"
   ],
   "injectors": {
     "defaultRequire": 1

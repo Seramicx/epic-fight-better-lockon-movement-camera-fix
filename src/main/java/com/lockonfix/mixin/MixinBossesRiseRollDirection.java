@@ -25,7 +25,7 @@ import org.spongepowered.asm.mixin.injection.Redirect;
  * {@link com.lockonfix.handler.LockOnMovementHandler} has already rewritten
  * those impulses to {@code (magnitude, 0)} so the player runs in the body's
  * facing direction with the camera decoupled. By the time BR reads them,
- * the actual key direction is lost — pressing S+D looks like "forward only"
+ * the actual key direction is lost - pressing S+D looks like "forward only"
  * to BR. Rotating that by {@code player.yRot} then produces a roll in the
  * camera-look direction every time, regardless of what the user pressed.
  *
@@ -33,11 +33,11 @@ import org.spongepowered.asm.mixin.injection.Redirect;
  * return raw key state instead. With the unrewritten input vector,
  * BR's existing {@code yRot} rotation produces the expected
  * camera-relative roll direction (W=forward, S+D=back-right relative to
- * camera, etc.) — matching the user's existing {@code DodgeSkillMixin}
+ * camera, etc.) - matching the user's existing {@code DodgeSkillMixin}
  * behavior for EpicFight dodges.
  *
  * <p>Falls back to {@code Input.forwardImpulse}/{@code leftImpulse} when no
- * keyboard keys are held — preserves controller analog stick input via
+ * keyboard keys are held - preserves controller analog stick input via
  * Controllable, since that path leaves the impulses set without rewriting
  * keyboard booleans.
  *
@@ -88,7 +88,7 @@ public class MixinBossesRiseRollDirection {
         }
         if (raw != 0) return raw;
 
-        // No keyboard keys held — fall through to original impulse so a
+        // No keyboard keys held - fall through to original impulse so a
         // controller analog stick (Controllable) still works. Controllable
         // writes input.forwardImpulse/leftImpulse without flipping the
         // keyUp/keyDown booleans.

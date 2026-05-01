@@ -1,113 +1,68 @@
-# Better Third Person & QOL Fixes
+# Epic Fight x Better Lock On: Movement Fixes
 
-A companion mod for [Better Lockon](https://github.com/ShelMarow/Better-Lockon) and [Epic Fight](https://github.com/Antikythera-Studios/epicfight) on Minecraft Forge 1.20.1.
+A companion mod for [Better Lockon](https://github.com/ShelMarow/Better-Lockon) and [Epic Fight](https://github.com/Antikythera-Studios/epicfight) on Forge 1.20.1.
 
-![Mod Showcase](https://raw.githubusercontent.com/Seramicx/Epic-Fight-Better-Lockon-Souls-Fix/assets/lockon_showcase_small.gif)
+Fixes movement direction, dodge direction, and attack/aim targeting while locked on. Souls-like feel without the jank.
 
-Better Lockon's movement has quite a few issues out of the box. In 1st person, trying to walk backwards or strafe just forces you straight into the enemy. In 3rd person, dodge rolls only go towards whoever you're locked onto, so you can never actually roll away. This mod fixes all of that and makes lock-on movement feel natural in third-person combat.
+## Features
 
-## What it does
-
-### Movement
-- **Full 360 movement and dodging** in any direction while locked on, in both 1st and 3rd person
-- **Fixes the 1st person magnetism bug** where pressing back/sideways drags you into the enemy
-- **Smooth turning** instead of the rigid 8-direction snapping
-- **Decoupled camera/body movement**: face your camera whatever direction you want while running in a completely different direction, like a normal 3rd person MMO/soulslike game
-- **Mount-rotate steering**: same decoupled camera behavior on horses and other mounts, with smooth body lerp toward the camera direction
-
-### Combat
-- **Stops camera drag** from Epic Fight constantly pulling your rotation toward the target
-- **Guard and parry compatibility**: auto-faces the locked-on enemy when blocking with a shield
-- **Bow/crossbow/trident aim correction**: arrows fire where the 3rd person crosshair actually points, accounting for shoulder offset parallax. No adaptive crosshair needed
-- **Iron's Spells aim correction**: spells fire toward the crosshair (free aim) or the locked-on target, for instant cast, held cast, quick cast, and spell book keybinds. No adaptive crosshair needed
-- **Quick cast auto-face**: when casting via quick cast or tapping right click while locked on, the spell fires at the lock-on target instead of wherever the body happens to be facing
-
-### Camera
-- **Over-the-shoulder camera**: lateral + vertical camera offset in 3rd person, with shoulder swap keybind and wall collision so the camera doesn't clip through blocks
-- **Overhead crosshair preset**: a second camera preset that puts the crosshair above the player's head instead of over the shoulder, for people who prefer centered aiming
-- **Forward/back camera offset (zoom)**: adjust camera distance in addition to the lateral/vertical offsets
-- **Crosshair correction**: when the camera is offset, block/entity interaction aligns with where the crosshair actually points on screen
-- **Adaptive player hiding**: the player model disappears when the camera is pushed too close (e.g., backed against a wall) to prevent clipping into the model
-- **Look-down camera centering**: camera offset collapses to centered when looking straight down, so you can pillar up and build downward without the offset getting in the way
-
-### Lock-On
-- **Extended lock-on range** (configurable) so you can actually lock onto flying bosses
-- **Auto lock-on**: automatic target switching when your current target dies, with directional mouse flick or controller right-stick flick to manually switch between targets
-
-### Compatibility
-- **[Controllable](https://github.com/MrCrayfish/Controllable)**: full analog stick 360 movement, 360 dodge roll with precise stick angle, and right-stick camera control during mount-rotate
-- **[Valkyrien Skies 2](https://github.com/ValkyrienSkies/Valkyrien-Skies-2)**: camera offset works correctly when riding mounts on ships
-- **[FTB Teams](https://www.curseforge.com/minecraft/mc-mods/ftb-teams-forge)**: auto lock-on won't target teammates or allies (Ally rank or higher)
-- **[Iron's Spells 'n Spellbooks](https://www.curseforge.com/minecraft/mc-mods/irons-spells-n-spellbooks)**: aim correction for all cast types
-- **[epicfight_extra](https://github.com/GodGun968/epicfight_extra)**: defers to its dodge direction logic on keyboard, uses precise analog on controller
-
-## Keybinds
-
-All of these live under the **Lock-On Movement Fix** category in Controls.
-
-- **Toggle Auto Lock-On**: unbound by default (bind it if you want the feature).
-- **Swap Shoulder**: defaults to **O**. Cycles through RIGHT -> LEFT -> OVERHEAD -> RIGHT.
-
-## Auto Lock-On
-
-Bind the **Toggle Auto Lock-On** key in your controls menu (unbound by default). When enabled:
-
-1. Lock onto a target normally with your existing lock-on key
-2. When that target dies, you hop to someone else that still feels fair: usually whoever's in front of you, without totally ignoring a dude glued to your back
-3. **Mouse flick** (or controller right-stick flick) left or right to manually switch targets in that direction
-4. If no valid targets are in range, lock-on releases; you'll need to manually lock on again to resume auto-switching
-
-The target selection uses a forward-facing camera cone. Enemies in front of you are strongly preferred, but very close enemies slightly behind you can still be selected if their proximity outweighs the angular penalty.
-
-## Config
-
-The mod creates a `lockonmovementfix-client.toml` in your config folder. Here's what you can change:
-
-| Option | Default | What it does |
-|--------|---------|-------------|
-| `turnSpeed` | 0.45 | How fast you turn while moving. Lower = smoother, wider arcs |
-| `idleTurnSpeed` | 0.70 | How fast you turn to face the target when standing still |
-| `mountTurnSpeed` | 0.25 | How fast the mount rotates. Lower than foot speed since the model is bigger |
-| `autoFaceTarget` | true | Auto-face the target when idle and during guard/parry. Set to false for full manual control |
-| `lockOnRange` | 64 | Max lock-on distance in blocks. Vanilla Epic Fight caps out around 16-20 |
-| `filterPlayersFromAutoLockOn` | true | Exclude other players from auto target switching (good for co-op) |
-| `filterTeamAllies` | true | Exclude FTB Teams allies and vanilla scoreboard teammates from auto lock-on |
-| `flickSensitivity` | 8.0 | Degrees of mouse/camera movement to trigger a directional target switch (3-45) |
-| `cameraOffsetX` | 0.75 | Horizontal camera offset in blocks. Negative = left shoulder, positive = right. 0 = centered |
-| `cameraOffsetY` | 0.15 | Vertical camera offset in blocks |
-| `cameraOffsetZ` | 0.0 | Forward/backward camera offset (zoom). Negative = further away |
-| `cameraOffsetSmoothing` | 0.5 | How fast the camera transitions when swapping shoulders (0.05 to 1.0) |
-| `cameraOverheadOffsetY` | 1.2 | Vertical offset for the overhead preset (3rd tap of Swap Shoulder) |
-| `defaultShoulderPreset` | RIGHT | Which shoulder preset to start on. RIGHT, LEFT, or OVERHEAD |
-| `cameraLookDownCenterAngle` | 5.0 | Angle from straight down where camera offset collapses to centered. 0 = disabled |
-| `hidePlayerWhenClose` | true | Hide the player model when the camera is pushed very close |
-| `hidePlayerDistance` | 0.8 | Distance threshold for hiding the player model |
+- 360 movement during lock-on. W goes toward, S goes away, A/D strafe, all relative to the camera. No more being dragged into the enemy.
+- Body smoothing that survives Epic Fight's per-tick yRot rewrites, so the body doesn't snap.
+- Auto lock-on when you hit an unlocked enemy. Configurable range, optional player and team filter (vanilla scoreboard teams + FTB Teams).
+- Mouse-flick target switching, with controller right-stick support via Controllable.
+- Dodge roll direction follows your WASD relative to the camera, not just toward the locked target. So you can actually roll away.
+- Attack lunge fix. The vanilla lunge motion can go off-target if `modelYRot` is stale at the moment the attack starts. Snapping it at the right point fixes that.
+- Bow / crossbow / trident: charges and releases hit the crosshair.
+- Use-item aim fix for buckets, spawn eggs, fishing rods, and Iron's Spells instant items.
+- Auto-face during cast or guard. Body smoothly rotates toward the locked target when you're holding a guard or casting a spell.
+- Bosses' Rise compat: roll direction follows WASD camera-relatively, camera stays decoupled during the roll, vanilla render is preserved.
 
 ## Requirements
 
-- Minecraft Forge 1.20.1
-- Epic Fight
-- Better Lockon
+- Minecraft 1.20.1 + Forge 47+
+- [Epic Fight](https://www.curseforge.com/minecraft/mc-mods/epic-fight) 20.14.1+
 
-## Optional Compatibility
+## Optional companions
 
-- Controllable (controller support)
-- Valkyrien Skies 2 (ship-mounted camera)
-- FTB Teams (ally filtering)
-- Iron's Spells 'n Spellbooks (aim correction)
+These are auto-detected and the relevant features turn on if they're installed:
 
-## Install
+- [Better Lockon](https://www.curseforge.com/minecraft/mc-mods/better-lockon)
+- [Iron's Spells 'n Spellbooks](https://www.curseforge.com/minecraft/mc-mods/irons-spells-n-spellbooks)
+- [Bosses' Rise](https://www.curseforge.com/minecraft/mc-mods/bosses-rise)
+- [FTB Teams](https://www.curseforge.com/minecraft/mc-mods/ftb-teams-forge)
+- [Controllable](https://www.curseforge.com/minecraft/mc-mods/controllable)
 
-Grab the latest jar from the [Releases](../../releases) page and drop it in your mods folder.
+## Companion mods
 
-<details>
-<summary>Building from source</summary>
+The camera, mount, ship, and F5 features that used to live here are now their own standalone mods:
 
-1. Clone the repo
-2. Run `gradlew build`
-3. Jar ends up in `build/libs`
-</details>
+- [Shoulder Surfing Reloaded: Camera Fixes & Additions](https://github.com/Seramicx/ssr-camera-fixes)
+- [Seramicx's Better Mount Steering](https://github.com/Seramicx/better-mount-steering)
+- [Shoulder Surfing Reloaded x Valkyrien Skies Compat](https://github.com/Seramicx/ssr-vs-compat)
+- [Seramicx's Smooth F5](https://github.com/Seramicx/seramicx-smooth-f5)
+
+Pick the ones you want.
+
+## Config
+
+`config/lockonmovementfix-client.toml` (generated on first launch):
+
+- `turnSpeed` - body lerp factor while moving (default 0.45).
+- `idleTurnSpeed` - body lerp factor when standing still or aiming or blocking (default 0.7).
+- `autoFaceTarget` - whether the body auto-rotates toward the target during idle/guard/cast.
+- `lockOnRange` - max lock-on range in blocks (default 64).
+- `filterPlayersFromAutoLockOn` - skip players when auto-picking targets.
+- `flickSensitivity` - mouse degrees needed to trigger directional target switch (default 8).
+- `filterTeamAllies` - skip vanilla scoreboard teammates and FTB Teams allies.
+
+## Keybinds
+
+- Toggle Auto Lock-On (unbound by default).
+
+## v2.0.0
+
+The previous all-in-one shipped a built-in shoulder cam, mount steering, VS compat, and an F5 fork. v2.0.0 strips all that out into separate mods (linked above). Lock-on movement, dodge, lunge, aim, and auto-lockon stay here.
 
 ## License
 
-MIT. See [LICENSE](LICENSE) for details.
+MIT

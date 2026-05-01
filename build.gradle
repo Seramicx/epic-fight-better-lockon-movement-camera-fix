@@ -65,7 +65,10 @@ dependencies {
 
     // Epic Fight - compile only via CurseMaven
     compileOnly fg.deobf("curse.maven:epic-fight-mod-405076:7878000")
-    
+
+    // Shoulder Surfing Reloaded 4.22.7 - hard runtime dep, compileOnly here
+    compileOnly fg.deobf("curse.maven:shoulder-surfing-reloaded-243190:7974108")
+
     // Mixin annotation processor
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 }
