@@ -9,47 +9,24 @@ import net.minecraftforge.common.ForgeConfigSpec;
 public class FixConfig {
 
     public static final ForgeConfigSpec CLIENT_CONFIG;
-    
-    // Movement
+
     public static final ForgeConfigSpec.DoubleValue TURN_SPEED;
     public static final ForgeConfigSpec.DoubleValue IDLE_TURN_SPEED;
-    public static final ForgeConfigSpec.DoubleValue MOUNT_TURN_SPEED;
-    
-    // Behavior
+
     public static final ForgeConfigSpec.BooleanValue AUTO_FACE_TARGET;
 
-    // Lock-On Range
     public static final ForgeConfigSpec.IntValue LOCK_ON_RANGE;
 
-    // Auto Lock-On
     public static final ForgeConfigSpec.BooleanValue FILTER_PLAYERS_FROM_AUTO_LOCKON;
     public static final ForgeConfigSpec.DoubleValue FLICK_SENSITIVITY;
 
-    // Camera Offset (Over-the-Shoulder)
-    public static final ForgeConfigSpec.DoubleValue CAMERA_OFFSET_X;
-    public static final ForgeConfigSpec.DoubleValue CAMERA_OFFSET_Y;
-    public static final ForgeConfigSpec.DoubleValue CAMERA_OFFSET_Z;
-    public static final ForgeConfigSpec.DoubleValue CAMERA_OFFSET_SMOOTHING;
-    public static final ForgeConfigSpec.BooleanValue HIDE_PLAYER_WHEN_CLOSE;
-    public static final ForgeConfigSpec.DoubleValue HIDE_PLAYER_DISTANCE;
-
-    // Shoulder overhead preset
-    public static final ForgeConfigSpec.DoubleValue CAMERA_OVERHEAD_OFFSET_Y;
-    public static final ForgeConfigSpec.EnumValue<ShoulderPreset> DEFAULT_SHOULDER_PRESET;
-
-    // Look-down camera centering (pillar-up assist)
-    public static final ForgeConfigSpec.DoubleValue CAMERA_LOOK_DOWN_CENTER_ANGLE;
-
-    public enum ShoulderPreset { RIGHT, LEFT, OVERHEAD }
-
-    // FTB Teams ally filter
     public static final ForgeConfigSpec.BooleanValue FILTER_FTB_ALLIES_FROM_AUTO_LOCKON;
 
     static {
         ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
 
         builder.comment("Movement Settings").push("movement");
-        
+
         TURN_SPEED = builder
                 .comment(
                     "How fast the player turns while moving (per-tick interpolation factor).",
@@ -57,7 +34,7 @@ public class FixConfig {
                     "0.1 = very smooth drift, 0.5 = balanced, 1.0 = instant snap (no smoothing)."
                 )
                 .defineInRange("turnSpeed", 0.45, 0.05, 1.0);
-        
+
         IDLE_TURN_SPEED = builder
                 .comment(
                     "How fast the player turns to face the target when standing still (for attacks).",
@@ -66,20 +43,10 @@ public class FixConfig {
                 )
                 .defineInRange("idleTurnSpeed", 0.7, 0.05, 1.0);
 
-        MOUNT_TURN_SPEED = builder
-                .comment(
-                    "Per-tick turn factor used while riding a mount (horse, pig, strider, etc.).",
-                    "Applies to BOTH the lock-on auto-rotation AND the not-locked-on mount-rotate",
-                    "(camera-decoupled steering). Lower than turnSpeed by default because mount yaw",
-                    "drives a bigger visible model and large per-tick steps look stiff.",
-                    "0.15 = very smooth, 0.25 = balanced, 0.5 = snappy."
-                )
-                .defineInRange("mountTurnSpeed", 0.25, 0.05, 1.0);
-
         builder.pop();
 
         builder.comment("Lock-On Range Settings").push("lockOnRange");
-        
+
         LOCK_ON_RANGE = builder
                 .comment(
                     "Maximum lock-on range in blocks.",
@@ -88,7 +55,7 @@ public class FixConfig {
                     "This overrides Epic Fight's internal lock-on range."
                 )
                 .defineInRange("lockOnRange", 64, 8, 256);
-        
+
         builder.pop();
 
         builder.comment("Behavior Settings").push("behavior");
@@ -122,77 +89,6 @@ public class FixConfig {
                     "Only applies when auto lock-on is active."
                 )
                 .defineInRange("flickSensitivity", 8.0, 3.0, 45.0);
-
-        builder.pop();
-
-        builder.comment("Camera Offset (Over-the-Shoulder)").push("camera");
-
-        CAMERA_OFFSET_X = builder
-                .comment(
-                    "Horizontal camera offset in blocks. Negative = left shoulder, Positive = right shoulder.",
-                    "Set to 0 to disable the over-the-shoulder offset.",
-                    "Use the 'Swap Shoulder' keybind to flip this at runtime."
-                )
-                .defineInRange("cameraOffsetX", 0.75, -3.0, 3.0);
-
-        CAMERA_OFFSET_Y = builder
-                .comment(
-                    "Vertical camera offset in blocks. Positive = higher, Negative = lower."
-                )
-                .defineInRange("cameraOffsetY", 0.15, -2.0, 2.0);
-
-        CAMERA_OFFSET_Z = builder
-                .comment(
-                    "Forward/Backward camera offset in blocks (Zoom).",
-                    "Positive = further away (closer to player), Negative = further back (away from player).",
-                    "Set to 0 to use the vanilla distance calculation."
-                )
-                .defineInRange("cameraOffsetZ", 0.0, -4.0, 4.0);
-
-        CAMERA_OFFSET_SMOOTHING = builder
-                .comment(
-                    "How fast the camera offset transitions when swapping shoulders or changing offset.",
-                    "Lower = slower/smoother transition, 1.0 = instant."
-                )
-                .defineInRange("cameraOffsetSmoothing", 0.5, 0.05, 1.0);
-
-        HIDE_PLAYER_WHEN_CLOSE = builder
-                .comment(
-                    "Hide the player model when the camera is very close (e.g., backed against a wall).",
-                    "Prevents the camera from clipping inside the player model."
-                )
-                .define("hidePlayerWhenClose", true);
-
-        HIDE_PLAYER_DISTANCE = builder
-                .comment(
-                    "Distance threshold (in blocks) below which the player model is hidden.",
-                    "Only applies when hidePlayerWhenClose is true."
-                )
-                .defineInRange("hidePlayerDistance", 0.8, 0.1, 3.0);
-
-        CAMERA_OVERHEAD_OFFSET_Y = builder
-                .comment(
-                    "Vertical offset for the 'overhead' shoulder preset (3rd tap of the Swap Shoulder keybind).",
-                    "Positive = camera higher above the player, so the player appears below screen center and the crosshair sits above their head.",
-                    "Modeled after Leawind's Third Person overhead crosshair."
-                )
-                .defineInRange("cameraOverheadOffsetY", 1.2, -2.0, 4.0);
-
-        DEFAULT_SHOULDER_PRESET = builder
-                .comment(
-                    "Which shoulder preset the Swap Shoulder cycle starts on each session.",
-                    "Cycle order is RIGHT -> LEFT -> OVERHEAD -> RIGHT regardless of starting point."
-                )
-                .defineEnum("defaultShoulderPreset", ShoulderPreset.RIGHT);
-
-        CAMERA_LOOK_DOWN_CENTER_ANGLE = builder
-                .comment(
-                    "Angle (degrees from straight down) below which the camera lateral and vertical offsets",
-                    "collapse to 0, centering the camera directly above the player so you can build downward",
-                    "and pillar up easily. The existing camera offset smoothing handles the transition.",
-                    "Set to 0 to disable."
-                )
-                .defineInRange("cameraLookDownCenterAngle", 5.0, 0.0, 90.0);
 
         builder.pop();
 

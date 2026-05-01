@@ -64,6 +64,25 @@ public abstract class DodgeSkillMixin {
             return;
         }
 
+        // Read the actual rendered camera yaw - the value the user sees as
+        // "forward". This is reliable across all camera modes:
+        //   - Lock-on: EpicFight's RenderEngine.correctCamera listener
+        //     (post-Camera.setup, via ViewportEvent.ComputeCameraAngles)
+        //     overwrites Camera.yRot to point at the target. Reading the
+        //     final Camera.yRot gives target direction.
+        //   - Sprint/mount decouple: SSR's MixinCamera writes Camera.yRot
+        //     from its decoupled internal yaw (mouse direction).
+        //   - Vanilla 3rd-person: Camera.yRot follows player.yRot.
+        //
+        // We previously read SSR's internal camera.yRot directly, but during
+        // lock-on it drifts each frame: EpicFight's syncLockOnRotations
+        // resets it to target direction once per frame, then SSR's renderTick
+        // followPlayerRotations lerps it toward player.yRot (= movement
+        // direction during sprint+lockon). Reading SSR's cam between frames
+        // therefore gave intermediate, unpredictable values, and the dodge
+        // angle was often wrong during sprint+lockon. The final vanilla
+        // Camera.yRot doesn't have that drift problem because EpicFight's
+        // correctCamera writes target direction at the end of each frame.
         float cameraYaw = mc.gameRenderer.getMainCamera().getYRot();
 
         float offsetDegrees;

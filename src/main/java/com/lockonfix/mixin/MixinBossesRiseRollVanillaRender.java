@@ -28,7 +28,7 @@ import yesman.epicfight.client.world.capabilites.entitypatch.player.LocalPlayerP
  * {@code HumanoidModel} mixin fires, and the rolling animation plays. When
  * the roll ends, this mixin returns no-op and EpicFight's render resumes.
  *
- * <p>Compiles and loads cleanly without Bosses'Rise present —
+ * <p>Compiles and loads cleanly without Bosses'Rise present -
  * {@link IntegrationRegistry#isBossesRise()} short-circuits, and
  * {@link BossesRiseIntegration#isRolling} is reflection-only.
  */

@@ -15,7 +15,7 @@ import yesman.epicfight.client.world.capabilites.entitypatch.player.LocalPlayerP
  *
  * <p>EpicFight's {@code MoveCoordFunctions.MODEL_COORD} (used by attack
  * lunges) reads the player's transform via {@code getModelMatrix}, which
- * uses {@code modelYRot} — not vanilla {@code yRot}. EpicFight's own
+ * uses {@code modelYRot} - not vanilla {@code yRot}. EpicFight's own
  * {@code LocalPlayerPatch.beginAction} tries to snap them equal:
  * <pre>
  *   if (!useModelYRot || SYNC_CAMERA) modelYRot = original.getYRot();
@@ -28,7 +28,7 @@ import yesman.epicfight.client.world.capabilites.entitypatch.player.LocalPlayerP
  * through {@code yBodyRot} and into {@code modelYRot} via the standard
  * 45°/tick lerp. Net effect: at attack-start, {@code modelYRot} can
  * sit ±90° away from {@code yRot} (= target direction). The lunge
- * fires in the {@code modelYRot} direction — e.g., NE for S+D,
+ * fires in the {@code modelYRot} direction - e.g., NE for S+D,
  * NW for S+A.
  *
  * <p>EpicFight's beginAction does {@code setYRot(toTarget)} at the very end

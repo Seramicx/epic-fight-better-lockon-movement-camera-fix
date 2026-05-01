@@ -37,7 +37,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  *
  * <p>{@code yBodyRot} is never touched by {@code move}, so vanilla
  * {@code tickHeadTurn} continues to swing the body model toward the roll
- * velocity — the rolling animation still visually rolls in the right
+ * velocity - the rolling animation still visually rolls in the right
  * direction.
  *
  * <p>{@code @Pseudo} so the mod still loads when Bosses'Rise is absent.
