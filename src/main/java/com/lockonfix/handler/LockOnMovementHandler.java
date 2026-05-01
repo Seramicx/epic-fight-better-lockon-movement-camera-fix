@@ -7,6 +7,7 @@ import com.lockonfix.compat.ControllableIntegration;
 import com.lockonfix.compat.IntegrationRegistry;
 import com.lockonfix.compat.ValkyrienSkiesIntegration;
 import com.mojang.logging.LogUtils;
+import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.Input;
 import net.minecraft.client.player.LocalPlayer;
@@ -158,12 +159,15 @@ public class LockOnMovementHandler {
         LivingEntity target = api.getFocusingEntity();
         if (target == null || !target.isAlive()) return;
 
-        // BLO already handles 360° movement and guard auto-face. Defer to it
-        // unless we're aiming/casting: BLO doesn't know about Iron's Spells,
-        // and we need our world-space movement math during a cast or
-        // W/A/S/D would otherwise drag the player toward the target.
+        // BLO compensates its sprint-convert (S/A/D -> forward) by rotating
+        // player.yRot to a side direction, but that compensation is gated to
+        // 3rd person only (EpicFightCameraAPIMixin line 604). In 1st person,
+        // sprinting + locked on while pressing S/A/D drives the player toward
+        // the target. So in 1st person we always need to run our 360 code.
+        // In 3rd person, defer to BLO unless we're aiming / blocking / casting.
         boolean needAutoFace = shouldAutoFaceTarget(player) && getAutoFaceTarget();
-        if (IntegrationRegistry.isBetterLockOn() && !needAutoFace) {
+        boolean isFirstPerson = MC.options.getCameraType() == CameraType.FIRST_PERSON;
+        if (IntegrationRegistry.isBetterLockOn() && !needAutoFace && !isFirstPerson) {
             return;
         }
 
