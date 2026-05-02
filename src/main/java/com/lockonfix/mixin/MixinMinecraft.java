@@ -44,6 +44,44 @@ public abstract class MixinMinecraft {
     @Unique private static float lockonfix$origYBodyRot;
     @Unique private static boolean lockonfix$shouldRestore;
 
+    @Unique private static boolean lockonfix$keybinds$wasLocked;
+    @Unique private static boolean lockonfix$keybinds$wasTPB;
+
+    /**
+     * EpicFight's MixinMinecraft auto-cancels lock-on whenever the camera type
+     * is not THIRD_PERSON_BACK (see its INVOKE-AFTER inject on setCameraType
+     * in handleKeybinds). That makes F5 → 1st person silently kill an active
+     * lock-on. Restore it here so the player can stay locked on while in
+     * first person.
+     */
+    @Inject(method = "handleKeybinds()V", at = @At("HEAD"))
+    private void lockonfix$captureLockOnState(CallbackInfo ci) {
+        try {
+            EpicFightCameraAPI api = EpicFightCameraAPI.getInstance();
+            lockonfix$keybinds$wasLocked = api != null && api.isLockingOnTarget();
+        } catch (Throwable t) {
+            lockonfix$keybinds$wasLocked = false;
+        }
+        Minecraft mc = (Minecraft) (Object) this;
+        lockonfix$keybinds$wasTPB = mc.options.getCameraType() == CameraType.THIRD_PERSON_BACK;
+    }
+
+    @Inject(method = "handleKeybinds()V", at = @At("TAIL"))
+    private void lockonfix$restoreLockOnIn1stPerson(CallbackInfo ci) {
+        if (!lockonfix$keybinds$wasLocked) return;
+        if (!lockonfix$keybinds$wasTPB) return;
+
+        Minecraft mc = (Minecraft) (Object) this;
+        if (mc.options.getCameraType() != CameraType.FIRST_PERSON) return;
+
+        try {
+            EpicFightCameraAPI api = EpicFightCameraAPI.getInstance();
+            if (api != null && !api.isLockingOnTarget()) {
+                api.setLockOn(true);
+            }
+        } catch (Throwable ignored) {}
+    }
+
     @Inject(method = "startUseItem", at = @At("HEAD"))
     private void lockonfix$alignAimBeforeUseItem(CallbackInfo ci) {
         lockonfix$shouldRestore = false;
