@@ -1,5 +1,7 @@
 # Epic Fight x Better Lock On: Movement Fixes
 
+![Showcase](assets/showcase.gif)
+
 A bunch of small fixes that make Epic Fight + Better Lockon feel like a real souls-style combat setup. Forge 1.20.1.
 
 ## Features
