@@ -7,6 +7,7 @@ import com.lockonfix.compat.FTBTeamsIntegration;
 import com.lockonfix.compat.IntegrationRegistry;
 import com.mojang.logging.LogUtils;
 import net.minecraft.ChatFormatting;
+import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.MouseHandler;
 import net.minecraft.client.player.LocalPlayer;
@@ -77,6 +78,20 @@ public class AutoLockOnHandler {
     private static final double MIN_TICK_DELTA_DEGREES = 3.0;
     /** Ignore single-frame spikes larger than this (raw accumulatedDX pixels). */
     private static final double MAX_MOUSE_DX_PER_TICK = 400.0;
+
+    /**
+     * Latest horizontal cursor delta as captured by MixinMouseHandler at HEAD
+     * of {@code MouseHandler.turnPlayer}, before vanilla zeroes the field.
+     * The mixin call site beats any reflection read at
+     * {@code ClientTickEvent.START}, which is racy across 1st/3rd person and
+     * across Forge/vanilla tick interleaving.
+     */
+    private static volatile double capturedMouseDx = 0.0;
+
+    /** Called by MixinMouseHandler at HEAD of turnPlayer. */
+    public static void recordMouseDx(double dx) {
+        capturedMouseDx = dx;
+    }
 
     // =====================================================================
     // Scoring weights
@@ -210,11 +225,16 @@ public class AutoLockOnHandler {
                     }
                 }
             }
+        }
 
-            if (!isLockedOn || currentTarget == null || !currentTarget.isAlive()) {
-                resetFlickState();
-            }
-        } else {
+        // Reset flick state any tick the flick handler isn't valid: not
+        // locked on, no target, or neither auto-lockon nor the 1st-person
+        // BLO-gap path is active. Previously we reset whenever
+        // !autoLockOnEnabled, which killed accumulation in 1st person.
+        boolean isFirstPerson = MC.options.getCameraType() == CameraType.FIRST_PERSON;
+        boolean bloGapInFirstPerson = isFirstPerson && IntegrationRegistry.isBetterLockOn();
+        boolean flickActive = autoLockOnEnabled || bloGapInFirstPerson;
+        if (!flickActive || !isLockedOn || currentTarget == null || !currentTarget.isAlive()) {
             resetFlickState();
         }
 
@@ -292,6 +312,12 @@ public class AutoLockOnHandler {
     }
 
     private static double readMouseAccumDx() {
+        // capturedMouseDx is fed by MixinMouseHandler at HEAD of turnPlayer,
+        // which is the only timing-safe place to read accumulatedDX before
+        // vanilla zeroes it. Reflection fallback is kept for the case where
+        // the mixin failed to apply (e.g. mapping mismatch after a MC update).
+        if (capturedMouseDx != 0.0) return capturedMouseDx;
+
         initMouseReflection();
         if (mouseAccumDXField == null) return 0;
         try {
@@ -302,15 +328,20 @@ public class AutoLockOnHandler {
     }
 
     /**
-     * Same order of magnitude as vanilla horizontal look from mouse for one tick
-     * (MouseHandler.turnPlayer: dx * (sens*0.6+0.2), then cubed * 8).
+     * Vanilla per-tick yaw delta from a horizontal cursor delta. Mirrors
+     * MouseHandler.turnPlayer: f = sens*0.6+0.2, f1 = f*f*f*8, dy = dx*f1.
+     * The earlier implementation cubed (dx*sens) which made small movements
+     * vanish quickly and large ones explode -- not at all the same shape.
      */
     private static double mouseDxToYawDegrees(double dx) {
         if (dx == 0) return 0;
         if (Math.abs(dx) > MAX_MOUSE_DX_PER_TICK) return 0;
+        
+        // Use EXACT vanilla mouse math. Better Lockon passes this exact 
+        // value into its own logic.
         double sens = MC.options.sensitivity().get() * 0.6 + 0.2;
-        double d = dx * sens;
-        return d * d * d * 8.0;
+        double f1 = sens * sens * sens * 8.0;
+        return dx * f1; 
     }
 
     // =====================================================================
@@ -318,8 +349,6 @@ public class AutoLockOnHandler {
     // =====================================================================
 
     private static void handleFlickTickStart() {
-        if (!autoLockOnEnabled) return;
-
         EpicFightCameraAPI api = getAPI();
         if (api == null) return;
 
@@ -328,44 +357,61 @@ public class AutoLockOnHandler {
         LivingEntity currentTarget = api.getFocusingEntity();
 
         if (!isLockedOn || currentTarget == null || !currentTarget.isAlive()) return;
+
+        // BLO's mixin into EpicFightCameraAPI.turnCamera gates its flick-switch
+        // on `getCameraType() != FIRST_PERSON`, so its built-in target swap
+        // doesn't fire in 1st person. Cover that gap: run our flick whenever
+        // auto-lockon is enabled, OR we're in 1st person with BLO loaded.
+        boolean isFirstPerson = MC.options.getCameraType() == CameraType.FIRST_PERSON;
+        boolean bloGapInFirstPerson = isFirstPerson && IntegrationRegistry.isBetterLockOn();
+        if (!autoLockOnEnabled && !bloGapInFirstPerson) return;
         if (settlingDelay > 0) return;
         if (isInActionState(player)) return;
 
         if (flickCooldown > 0) {
             flickCooldown--;
-            return;
+            // Do NOT return! We must keep accumulating dx so the next flick is sensitive.
         }
 
         double dx = readMouseAccumDx();
-        double degreesApprox = mouseDxToYawDegrees(dx);
+        // In 3rd person, BLO seems to just use raw dx pixels. Let's do the same
+        // and add a multiplier since 1st person camera physically moves.
+        double dy = dx * 2.0;
 
         // Controllable's right-stick writes to mc.player.turn directly, never
         // touching MouseHandler.accumulatedDX. Read its per-frame yaw delta
         // (degrees, signed) and fold it into the same accumulator so flick
         // targeting works on controller. No-op when Controllable absent.
+        // We multiply stickDegrees because it's in degrees, not pixels.
         double stickDegrees = ControllableIntegration.getCameraYawDelta();
-        double tickDegrees = degreesApprox + stickDegrees;
+        
+        // Exact Better Lockon math: BLO receives `dy` from vanilla turnCamera 
+        // which has already been multiplied by (sens^3 * 8.0). It then multiplies 
+        // that by 0.15F and adds it to the accumulator.
+        // For 1st person, we skip the 0.15F damper to make it extra sensitive!
+        double tickDy = dy + (stickDegrees * 10.0);
 
-        if (Math.abs(tickDegrees) >= MIN_TICK_DELTA_DEGREES) {
-            flickAccum += tickDegrees;
-        } else {
-            flickAccum *= 0.3;
-        }
+        flickAccum += tickDy;
+        
+        // Use BLO's exact 0.98 decay per tick
+        flickAccum *= 0.98;
 
+        // Better Lockon's native threshold is exactly 20.0, but we use the config.
         double threshold = getFlickSensitivity();
-        if (Math.abs(flickAccum) > threshold) {
-            int flickDir = flickAccum > 0 ? 1 : -1;
-
-            LivingEntity best = findBestTarget(player, currentTarget, flickDir, currentTarget);
-            if (best != null) {
-                previousTarget = currentTarget;
-                setFocusingEntityReflect(api, best);
-                sendTargetingReflect(api, best);
-                settlingDelay = SETTLING_TICKS;
-            }
-
+        if (Math.abs(flickAccum) > threshold && flickCooldown <= 0) {
+            // Note: In 1st person, accumulated DX represents mouse movement. 
+            // A positive DX means moving the mouse right, which means we want
+            // to target the enemy to our RIGHT (direction = 1 in BLO's logic).
+            // But BLO's `setNextLockOnTarget` logic handles swapping in terms 
+            // of target list index order. It seems inverted for 1st person compared 
+            // to whatever raw mouse inputs BLO fed it in 3rd person. So we invert it.
+            int flickDir = flickAccum > 0 ? -1 : 1;
+            previousTarget = currentTarget;
+            api.setNextLockOnTarget(flickDir);
+            settlingDelay = SETTLING_TICKS;
+            
             flickAccum = 0;
-            flickCooldown = FLICK_COOLDOWN_TICKS;
+            flickCooldown = 4; // BLO native uses 4 ticks
         }
     }
 
