@@ -159,15 +159,114 @@ public class LockOnMovementHandler {
         LivingEntity target = api.getFocusingEntity();
         if (target == null || !target.isAlive()) return;
 
-        // BLO compensates its sprint-convert (S/A/D -> forward) by rotating
-        // player.yRot to a side direction, but that compensation is gated to
-        // 3rd person only (EpicFightCameraAPIMixin line 604). In 1st person,
-        // sprinting + locked on while pressing S/A/D drives the player toward
-        // the target. So in 1st person we always need to run our 360 code.
-        // In 3rd person, defer to BLO unless we're aiming / blocking / casting.
-        boolean needAutoFace = shouldAutoFaceTarget(player) && getAutoFaceTarget();
+        // 1ST PERSON LOCK-ON
+        //
+        // The fundamental difference vs. 3rd person:
+        //   - 3rd person: BLO's setupCamera writes to its own Camera object,
+        //     not to player.yRot. So BLO's postClientTick (line 615) can
+        //     freely rotate player.yRot to match movement direction; the
+        //     camera stays facing the target via cameraYRot independently.
+        //   - 1st person: BLO's setupCamera writes player.yRot directly
+        //     (player.yRot IS the camera). BLO's postClientTick writeback
+        //     to player.yRot is gated to 3rd person, so player.yRot just
+        //     stays as whatever cameraYRot lerp said it was -- always
+        //     pointing at the target.
+        //
+        // Travel() uses player.yRot for movement direction. With BLO's
+        // sprint-mangle (S/A/D -> forward), player.yRot = target_dir, and
+        // forwardImpulse > 0, you sprint TOWARD the target regardless of
+        // which key you pressed.
+        //
+        // Fix: do BLO's 3rd-person compensation ourselves at MovementInput
+        // time. Set player.yRot to the desired movement direction
+        // (target_yaw + WASD_offset) so travel() walks/sprints in the
+        // intended direction. BLO's setupCamera per-frame then overrides
+        // player.yRot back to cameraYRot for the camera render, so the
+        // user still sees the target. Two different yRot values used at
+        // two different times: tick-time for movement, frame-time for
+        // camera.
         boolean isFirstPerson = MC.options.getCameraType() == CameraType.FIRST_PERSON;
-        if (IntegrationRegistry.isBetterLockOn() && !needAutoFace && !isFirstPerson) {
+        if (isFirstPerson) {
+            wasLockedOn = true;
+            Input fpInput = event.getInput();
+
+            if (IntegrationRegistry.isBetterLockOn()) {
+                // 1ST PERSON LOCK-ON
+                //
+                // Sprint case: vanilla MC requires forwardImpulse > 0 for
+                // sprint to engage. BLO's LockOnControl mangles S/A/D into
+                // forward (forwardImpulse > 0) when sprinting+locked, but
+                // leaves player.yRot pointing at the target — so without
+                // yRot rotation, sprint+S would run you toward the target.
+                // We rotate player.yRot to the WASD-relative movement
+                // direction so travel() sprints in the right direction.
+                //
+                // The catch: setting yRot to a wildly different value
+                // causes vanilla Entity to unwrap yRotO by +/-360 to keep
+                // |yRot - yRotO| < 180. Then BLO's setupCamera per-frame
+                // override of yRot to cameraYRot leaves a 360-degree gap
+                // between yRotO and yRot, and vanilla Camera.setup does
+                // Mth.lerp(yRotO, yRot, partialTick) -- interpolating across
+                // that gap, causing visible camera jitter every render frame.
+                //
+                // We work around this by resetting BOTH yRot and yRotO
+                // back to cameraYRot in PlayerTickEvent.END (after travel,
+                // before render). That way, render-side lerp(yRotO, yRot)
+                // stays close to cameraYRot and the camera renders cleanly.
+                float[] dir = readDirectionalInput(fpInput);
+                float rawForward = dir[0];
+                float rawStrafe = dir[1];
+                float rawMagnitude = Mth.sqrt(rawForward * rawForward + rawStrafe * rawStrafe);
+                boolean isMoving = rawMagnitude > 0.01F;
+                boolean sprintHeld = MC.options.keySprint.isDown() && !MC.options.keyUse.isDown();
+
+                if (sprintHeld && isMoving) {
+                    // Sprint path: rotate yRot to movement direction so
+                    // travel + sprint moves correctly. Set both yRot and
+                    // yRotO to the same value so the in-tick vanilla unwrap
+                    // doesn't fire (yRotO would otherwise get unwrapped by
+                    // 360 to track our wild yRot value).
+                    float targetYaw = getYawToTarget(player, target);
+                    float offsetAngle = -(float)Math.toDegrees(Math.atan2(rawStrafe, rawForward));
+                    float movementYaw = Mth.wrapDegrees(targetYaw + offsetAngle);
+                    player.setYRot(movementYaw);
+                    player.yRotO = movementYaw;
+                    // Leave fpInput.forwardImpulse / leftImpulse as BLO set
+                    // them (positive forward).
+                } else {
+                    // Walk / idle path: just restore raw input. Don't touch
+                    // yRot -- it stays at whatever turnPlayer + setupCamera
+                    // last left it (~cameraYRot ~ target direction). Vanilla
+                    // travel interprets WASD relative to that: W=toward,
+                    // S=away, A=strafe-left, D=strafe-right.
+                    if (isMoving) {
+                        float modMagnitude = Mth.sqrt(fpInput.forwardImpulse * fpInput.forwardImpulse
+                                + fpInput.leftImpulse * fpInput.leftImpulse);
+                        float magnitude = Math.min(rawMagnitude, modMagnitude);
+                        float scale = magnitude / rawMagnitude;
+                        fpInput.forwardImpulse = rawForward * scale;
+                        fpInput.leftImpulse = rawStrafe * scale;
+                    } else {
+                        fpInput.forwardImpulse = 0F;
+                        fpInput.leftImpulse = 0F;
+                    }
+                }
+
+                float dz = 0.3F;
+                fpInput.up    = rawForward >  dz;
+                fpInput.down  = rawForward < -dz;
+                fpInput.left  = rawStrafe  >  dz;
+                fpInput.right = rawStrafe  < -dz;
+            }
+            return;
+        }
+
+        // 3RD PERSON LOCK-ON
+        // Defer to BLO unless we're aiming / blocking / casting (BLO doesn't
+        // know about Iron's Spells, and we need world-space movement math
+        // during a cast or W/A/S/D would drag the player toward the target).
+        boolean needAutoFace = shouldAutoFaceTarget(player) && getAutoFaceTarget();
+        if (IntegrationRegistry.isBetterLockOn() && !needAutoFace) {
             return;
         }
 
@@ -282,6 +381,35 @@ public class LockOnMovementHandler {
 
         player.yBodyRot = player.getYRot();
         player.yHeadRot = player.getYRot();
+    }
+
+    /**
+     * 1st person lock-on yRot reset. Runs at ClientTickEvent.END which
+     * fires after the entire Minecraft.tick() body, including turnPlayer
+     * (which would otherwise leave player.yRot mouse-rotated and far
+     * from cameraYRot at the next tick start).
+     *
+     * <p>Travel has already used whatever wild movement-direction yRot we
+     * set in MovementInputUpdateEvent. Now reset BOTH yRot and yRotO to
+     * cameraYRot. The MixinEntityViewRot bypass keeps the camera using
+     * cameraYRot lerp regardless, but resetting yRot keeps gameplay
+     * systems (animations, head bob, networking) consistent with where
+     * the camera is pointing.
+     */
+    @SubscribeEvent
+    public static void onClientTickEnd(TickEvent.ClientTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) return;
+        LocalPlayer player = MC.player;
+        if (player == null) return;
+        if (MC.options.getCameraType() != CameraType.FIRST_PERSON) return;
+        if (!IntegrationRegistry.isBetterLockOn()) return;
+        EpicFightCameraAPI api = getAPI();
+        if (api == null || !api.isLockingOnTarget()) return;
+        try {
+            float cameraYRot = api.getCameraYRot();
+            player.setYRot(cameraYRot);
+            player.yRotO = cameraYRot;
+        } catch (Throwable ignored) {}
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
