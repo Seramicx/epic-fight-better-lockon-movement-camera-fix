@@ -64,7 +64,7 @@ public class AutoLockOnHandler {
 
     /** After a target switch, ignore further switches for N ticks */
     private static int settlingDelay = 0;
-    private static final int SETTLING_TICKS = 5;
+    private static final int SETTLING_TICKS = 3;
 
     // =====================================================================
     // Flick detection (raw mouse, not player yaw)
@@ -76,8 +76,13 @@ public class AutoLockOnHandler {
     private static final int FLICK_COOLDOWN_TICKS = 15;
     /** Per-tick contribution below this is treated as tremor (see mouseDxToYawDegrees). */
     private static final double MIN_TICK_DELTA_DEGREES = 3.0;
-    /** Ignore single-frame spikes larger than this (raw accumulatedDX pixels). */
-    private static final double MAX_MOUSE_DX_PER_TICK = 400.0;
+    /**
+     * Ignore single-tick spikes larger than this (raw accumulatedDX pixels).
+     * Catches the "1000 pixel jump" you'd see resuming from pause/menu, but
+     * leaves room for a deliberate fast flick (which can easily exceed 400
+     * pixels in a single tick on a high-DPI mouse).
+     */
+    private static final double MAX_MOUSE_DX_PER_TICK = 1500.0;
 
     /**
      * Latest horizontal cursor delta as captured by MixinMouseHandler at HEAD
@@ -355,64 +360,102 @@ public class AutoLockOnHandler {
         LocalPlayer player = MC.player;
         boolean isLockedOn = api.isLockingOnTarget();
         LivingEntity currentTarget = api.getFocusingEntity();
-
         if (!isLockedOn || currentTarget == null || !currentTarget.isAlive()) return;
 
-        // BLO's mixin into EpicFightCameraAPI.turnCamera gates its flick-switch
-        // on `getCameraType() != FIRST_PERSON`, so its built-in target swap
-        // doesn't fire in 1st person. Cover that gap: run our flick whenever
-        // auto-lockon is enabled, OR we're in 1st person with BLO loaded.
+        // Two activation paths:
+        //   - autoLockOnEnabled (user toggled): flick works in any camera mode.
+        //   - 1st person + BLO loaded: BLO's native flick is gated to non-FP
+        //     in EpicFightCameraAPIMixin (cancel = cameraType != FIRST_PERSON
+        //     && (TPS || locked)), so we cover the FP gap.
         boolean isFirstPerson = MC.options.getCameraType() == CameraType.FIRST_PERSON;
         boolean bloGapInFirstPerson = isFirstPerson && IntegrationRegistry.isBetterLockOn();
         if (!autoLockOnEnabled && !bloGapInFirstPerson) return;
         if (settlingDelay > 0) return;
         if (isInActionState(player)) return;
 
+        // BLO's accumulator decays at 0.98/tick. We mirror that.
+        flickAccum *= 0.98;
+
+        // During cooldown: decay-only. NO accumulation while cooling down,
+        // so a single sustained mouse motion can't chain-fire flicks.
         if (flickCooldown > 0) {
             flickCooldown--;
-            // Do NOT return! We must keep accumulating dx so the next flick is sensitive.
+            return;
         }
 
         double dx = readMouseAccumDx();
-        // In 3rd person, BLO seems to just use raw dx pixels. Let's do the same
-        // and add a multiplier since 1st person camera physically moves.
-        double dy = dx * 2.0;
-
-        // Controllable's right-stick writes to mc.player.turn directly, never
-        // touching MouseHandler.accumulatedDX. Read its per-frame yaw delta
-        // (degrees, signed) and fold it into the same accumulator so flick
-        // targeting works on controller. No-op when Controllable absent.
-        // We multiply stickDegrees because it's in degrees, not pixels.
+        double yawDegrees = mouseDxToYawDegrees(dx);
         double stickDegrees = ControllableIntegration.getCameraYawDelta();
-        
-        // Exact Better Lockon math: BLO receives `dy` from vanilla turnCamera 
-        // which has already been multiplied by (sens^3 * 8.0). It then multiplies 
-        // that by 0.15F and adds it to the accumulator.
-        // For 1st person, we skip the 0.15F damper to make it extra sensitive!
-        double tickDy = dy + (stickDegrees * 10.0);
+        double tickDegrees = yawDegrees + stickDegrees;
 
-        flickAccum += tickDy;
-        
-        // Use BLO's exact 0.98 decay per tick
-        flickAccum *= 0.98;
+        // 3rd person uses BLO native math: tickDegrees * 0.15. In 1st
+        // person, BLO's setupCamera per-frame writes player.yRot back to
+        // cameraYRot, so the user's mouse motion is invisible -- there's
+        // no kinesthetic feedback that they're "doing something". Boost
+        // the damper to 0.5 (3.3x BLO 3rd-person) so the flick triggers
+        // on a deliberate motion. The instant-snap below kills any
+        // visible camera lerp, so even rapid flicks stay clean.
+        double damper = isFirstPerson ? 0.5 : 0.15;
+        flickAccum += tickDegrees * damper;
 
-        // Better Lockon's native threshold is exactly 20.0, but we use the config.
         double threshold = getFlickSensitivity();
-        if (Math.abs(flickAccum) > threshold && flickCooldown <= 0) {
-            // Note: In 1st person, accumulated DX represents mouse movement. 
-            // A positive DX means moving the mouse right, which means we want
-            // to target the enemy to our RIGHT (direction = 1 in BLO's logic).
-            // But BLO's `setNextLockOnTarget` logic handles swapping in terms 
-            // of target list index order. It seems inverted for 1st person compared 
-            // to whatever raw mouse inputs BLO fed it in 3rd person. So we invert it.
-            int flickDir = flickAccum > 0 ? -1 : 1;
-            previousTarget = currentTarget;
-            api.setNextLockOnTarget(flickDir);
-            settlingDelay = SETTLING_TICKS;
-            
-            flickAccum = 0;
-            flickCooldown = 4; // BLO native uses 4 ticks
+        if (Math.abs(flickAccum) <= threshold) return;
+
+        // BLO's setNextLockOnTarget(direction) picks the next target by
+        // screen X position. In 3rd person, mouse-right (positive accum)
+        // maps to direction=+1 (right target) intuitively. In 1st person,
+        // empirical observation: mouse-right swaps to a LEFT target with
+        // the 3rd-person sign, so the 1st-person sign is inverted. Likely
+        // due to how BLO's screen-X math interacts with the camera setup
+        // BLO does in 1st person locked-on (player.yRot override).
+        int flickDir = isFirstPerson
+            ? (flickAccum > 0 ? -1 : 1)
+            : (flickAccum > 0 ?  1 : -1);
+
+        previousTarget = currentTarget;
+        float camYawPre = Float.NaN;
+        try { camYawPre = api.getCameraYRot(); } catch (Throwable ignored) {}
+        api.setNextLockOnTarget(flickDir);
+
+        // 1st person: jump most of the way toward the new target so the
+        // user perceives a clean swap, then let BLO's natural per-tick
+        // lerp (0.4 of remaining angle, clamped to 30deg) finish the
+        // last sliver. The blend factor is what controls the feel:
+        //   - 1.0 = pure instant snap (felt jarring earlier).
+        //   - 0.0 = pure BLO lerp (~10 ticks, felt like "head moving too much").
+        //   - 0.85 = a gentle ~3-tick (~150ms) ease into the final angle.
+        if (isFirstPerson) {
+            LivingEntity newTarget = api.getFocusingEntity();
+            if (newTarget != null && newTarget.isAlive() && newTarget != currentTarget) {
+                Vec3 from = player.getEyePosition();
+                Vec3 to = newTarget.getEyePosition();
+                double tdx = to.x - from.x;
+                double tdy = to.y - from.y;
+                double tdz = to.z - from.z;
+                double horiz = Math.sqrt(tdx * tdx + tdz * tdz);
+                float newYaw = (float)(Mth.atan2(tdz, tdx) * (180.0 / Math.PI)) - 90.0F;
+                float newPitch = (float)(-Mth.atan2(tdy, horiz) * (180.0 / Math.PI));
+
+                // Blend: snap to 85% of the way; let BLO's natural per-tick
+                // lerp finish the last 15% over ~3 ticks for a soft tail.
+                final float blend = 0.85F;
+                float oldYaw = camYawPre;
+                float oldPitch = newPitch;
+                try { oldPitch = api.getCameraXRot(); } catch (Throwable ignored) {}
+                float blendedYaw = Mth.wrapDegrees(oldYaw + Mth.wrapDegrees(newYaw - oldYaw) * blend);
+                float blendedPitch = oldPitch + (newPitch - oldPitch) * blend;
+
+                try {
+                    api.setCameraRotations(blendedPitch, blendedYaw, true);
+                } catch (Throwable ignored) {
+                    // Older EF versions may not have this exposed; fall through silently.
+                }
+            }
         }
+
+        settlingDelay = SETTLING_TICKS;
+        flickAccum = 0;
+        flickCooldown = 4;  // BLO native uses 4 ticks
     }
 
     private static void resetFlickState() {

@@ -11,6 +11,7 @@
     "MixinBossesRiseRollDirection",
     "MixinBossesRiseRollPreserveCamera",
     "MixinBossesRiseRollVanillaRender",
+    "MixinEntityViewRot",
     "MixinFixAttackLungeDirection",
     "MixinMinecraft",
     "MixinMouseHandler",
