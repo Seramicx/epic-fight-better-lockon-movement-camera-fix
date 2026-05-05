@@ -194,12 +194,19 @@ public class LockOnMovementHandler {
                 // 1ST PERSON LOCK-ON
                 //
                 // Sprint case: vanilla MC requires forwardImpulse > 0 for
-                // sprint to engage. BLO's LockOnControl mangles S/A/D into
-                // forward (forwardImpulse > 0) when sprinting+locked, but
-                // leaves player.yRot pointing at the target — so without
-                // yRot rotation, sprint+S would run you toward the target.
-                // We rotate player.yRot to the WASD-relative movement
-                // direction so travel() sprints in the right direction.
+                // sprint to engage. To run in any WASD direction while
+                // locked on, we rotate player.yRot to the WASD-relative
+                // movement direction AND force forwardImpulse > 0 ourselves
+                // so travel() sprints in that direction.
+                //
+                // BLO 2.0.5 also mangled S/A/D -> forward in its
+                // LockOnControl.movementInputUpdateEvent, so historically
+                // this mod only had to set yRot; BLO did the impulse part.
+                // BLO 2.0.6 (commit bb99ddf, "fixed only-run-forward in
+                // 1st person") gated that mangling to 3rd person, so
+                // forwardImpulse now passes through signed. We replicate
+                // the mangle ourselves -- a no-op under 2.0.5, load-bearing
+                // under 2.0.6+.
                 //
                 // The catch: setting yRot to a wildly different value
                 // causes vanilla Entity to unwrap yRotO by +/-360 to keep
@@ -231,8 +238,14 @@ public class LockOnMovementHandler {
                     float movementYaw = Mth.wrapDegrees(targetYaw + offsetAngle);
                     player.setYRot(movementYaw);
                     player.yRotO = movementYaw;
-                    // Leave fpInput.forwardImpulse / leftImpulse as BLO set
-                    // them (positive forward).
+                    // Force forwardImpulse positive and leftImpulse = 0 so
+                    // travel() sprints along movementYaw regardless of which
+                    // key was held. min(raw, mod) preserves earlier handlers'
+                    // magnitude shrinks (e.g. Iron's Spells cast-time slowdown).
+                    float modMagnitude = Mth.sqrt(fpInput.forwardImpulse * fpInput.forwardImpulse
+                            + fpInput.leftImpulse * fpInput.leftImpulse);
+                    fpInput.forwardImpulse = Math.min(rawMagnitude, modMagnitude);
+                    fpInput.leftImpulse = 0F;
                 } else {
                     // Walk / idle path: just restore raw input. Don't touch
                     // yRot -- it stays at whatever turnPlayer + setupCamera
