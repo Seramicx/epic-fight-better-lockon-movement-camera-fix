@@ -51,12 +51,30 @@ public final class ControllableIntegration {
     }
 
     /**
-     * Whether the current directional input is analog (fractional) rather
-     * than digital (exactly ±1 or 0). This heuristic checks if either
-     * impulse value is non-zero and not exactly ±1.
+     * Whether the current directional input is analog (controller stick)
+     * rather than digital (keyboard or none).
+     *
+     * <p>Keyboard takes precedence: if any of W/A/S/D is physically down
+     * we treat input as digital, regardless of impulse values. This guards
+     * against handlers that rewrite {@link Input#forwardImpulse}/
+     * {@code leftImpulse} to fractional values during keyboard play (e.g.
+     * {@code LockOnMovementHandler}'s 1st-person sprint sets
+     * {@code forwardImpulse = sqrt(2)} ≈ 1.414, which used to falsely
+     * trip the fractional check and send camera-relative dodges down the
+     * analog branch).
+     *
+     * <p>Only after we've ruled out keyboard do we fall back to the
+     * fractional-impulse heuristic for actual stick input.
      */
     public static boolean isAnalogInput(Input input) {
         if (!IntegrationRegistry.isControllable()) return false;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc != null && mc.options != null) {
+            if (mc.options.keyUp.isDown() || mc.options.keyDown.isDown()
+                    || mc.options.keyLeft.isDown() || mc.options.keyRight.isDown()) {
+                return false;
+            }
+        }
         return isFractional(input.forwardImpulse) || isFractional(input.leftImpulse);
     }
 
