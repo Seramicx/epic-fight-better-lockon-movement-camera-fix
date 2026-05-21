@@ -1,22 +1,22 @@
 package com.lockonfix.handler;
 
 import com.lockonfix.LockOnMovementFix;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.RenderGuiOverlayEvent;
-import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
-import net.minecraftforge.eventbus.api.EventPriority;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.EventPriority;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.RenderGuiLayerEvent;
+import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 import yesman.epicfight.api.client.camera.EpicFightCameraAPI;
 
-@Mod.EventBusSubscriber(modid = LockOnMovementFix.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
+@EventBusSubscriber(modid = LockOnMovementFix.MOD_ID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
 public final class LockOnCrosshairHandler {
 
     private LockOnCrosshairHandler() {}
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
-    public static void onPreCrosshair(RenderGuiOverlayEvent.Pre event) {
-        if (!VanillaGuiOverlay.CROSSHAIR.id().equals(event.getOverlay().id())) return;
+    public static void onPreCrosshair(RenderGuiLayerEvent.Pre event) {
+        if (!VanillaGuiLayers.CROSSHAIR.equals(event.getName())) return;
         try {
             EpicFightCameraAPI api = EpicFightCameraAPI.getInstance();
             if (api != null && api.isLockingOnTarget()) {

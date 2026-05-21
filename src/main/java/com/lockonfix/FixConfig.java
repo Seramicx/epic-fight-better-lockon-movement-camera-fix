@@ -1,6 +1,6 @@
 package com.lockonfix;
 
-import net.minecraftforge.common.ForgeConfigSpec;
+import net.neoforged.neoforge.common.ModConfigSpec;
 
 /**
  * Configuration for the Lock-On Movement Fix mod.
@@ -8,22 +8,22 @@ import net.minecraftforge.common.ForgeConfigSpec;
  */
 public class FixConfig {
 
-    public static final ForgeConfigSpec CLIENT_CONFIG;
+    public static final ModConfigSpec CLIENT_CONFIG;
 
-    public static final ForgeConfigSpec.DoubleValue TURN_SPEED;
-    public static final ForgeConfigSpec.DoubleValue IDLE_TURN_SPEED;
+    public static final ModConfigSpec.DoubleValue TURN_SPEED;
+    public static final ModConfigSpec.DoubleValue IDLE_TURN_SPEED;
 
-    public static final ForgeConfigSpec.BooleanValue AUTO_FACE_TARGET;
+    public static final ModConfigSpec.BooleanValue AUTO_FACE_TARGET;
 
-    public static final ForgeConfigSpec.IntValue LOCK_ON_RANGE;
+    public static final ModConfigSpec.IntValue LOCK_ON_RANGE;
 
-    public static final ForgeConfigSpec.BooleanValue FILTER_PLAYERS_FROM_AUTO_LOCKON;
-    public static final ForgeConfigSpec.DoubleValue FLICK_SENSITIVITY;
+    public static final ModConfigSpec.BooleanValue FILTER_PLAYERS_FROM_AUTO_LOCKON;
+    public static final ModConfigSpec.DoubleValue FLICK_SENSITIVITY;
 
-    public static final ForgeConfigSpec.BooleanValue FILTER_FTB_ALLIES_FROM_AUTO_LOCKON;
+    public static final ModConfigSpec.BooleanValue FILTER_FTB_ALLIES_FROM_AUTO_LOCKON;
 
     static {
-        ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
+        ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
 
         builder.comment("Movement Settings").push("movement");
 

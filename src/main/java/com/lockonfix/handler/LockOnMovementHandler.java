@@ -13,12 +13,13 @@ import net.minecraft.client.player.Input;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.MovementInputUpdateEvent;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.EventPriority;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.EventPriority;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.MovementInputUpdateEvent;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import org.slf4j.Logger;
 import yesman.epicfight.api.animation.types.EntityState;
 import yesman.epicfight.api.client.camera.EpicFightCameraAPI;
@@ -29,9 +30,9 @@ import yesman.epicfight.client.world.capabilites.entitypatch.player.LocalPlayerP
  * 360 degree free movement during lock-on, plus body smoothing that survives
  * Epic Fight's per-tick {@code postClientTick} yRot rewrites. We track our own
  * {@code smoothedYRot} independent of what EF writes and re-apply it in both
- * {@code MovementInputUpdateEvent} and {@code PlayerTickEvent.END}.
+ * {@code MovementInputUpdateEvent} and {@code PlayerTickEvent.Post}.
  */
-@Mod.EventBusSubscriber(modid = LockOnMovementFix.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
+@EventBusSubscriber(modid = LockOnMovementFix.MOD_ID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
 public class LockOnMovementHandler {
 
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -397,7 +398,7 @@ public class LockOnMovementHandler {
     }
 
     /**
-     * 1st person lock-on yRot reset. Runs at ClientTickEvent.END which
+     * 1st person lock-on yRot reset. Runs at ClientTickEvent.Post which
      * fires after the entire Minecraft.tick() body, including turnPlayer
      * (which would otherwise leave player.yRot mouse-rotated and far
      * from cameraYRot at the next tick start).
@@ -410,8 +411,7 @@ public class LockOnMovementHandler {
      * the camera is pointing.
      */
     @SubscribeEvent
-    public static void onClientTickEnd(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
+    public static void onClientTickPost(ClientTickEvent.Post event) {
         LocalPlayer player = MC.player;
         if (player == null) return;
         if (MC.options.getCameraType() != CameraType.FIRST_PERSON) return;
@@ -426,12 +426,11 @@ public class LockOnMovementHandler {
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
-    public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
-        if (!event.side.isClient()) return;
+    public static void onPlayerTick(PlayerTickEvent.Post event) {
+        if (!(event.getEntity() instanceof LocalPlayer)) return;
 
         LocalPlayer player = MC.player;
-        if (player == null || event.player != player) return;
+        if (player == null || event.getEntity() != player) return;
 
         // BLO handles yaw override; our smoothedYRot would be stale.
         if (IntegrationRegistry.isBetterLockOn()) return;

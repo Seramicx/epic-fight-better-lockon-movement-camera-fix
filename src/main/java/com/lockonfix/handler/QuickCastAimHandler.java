@@ -9,11 +9,11 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.EventPriority;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.EventPriority;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 import yesman.epicfight.api.client.camera.EpicFightCameraAPI;
 
 /**
@@ -23,7 +23,7 @@ import yesman.epicfight.api.client.camera.EpicFightCameraAPI;
  * is whatever was last sent via {@code sendPosition} (typically the
  * movement-direction yaw, not the crosshair direction or lock-on target).
  *
- * <p>This handler runs on {@code ClientTickEvent.START} at {@code HIGHEST}
+ * <p>This handler runs on {@code ClientTickEvent.Pre} at {@code HIGHEST}
  * priority, before Iron's Spells' default-priority {@code handleKeybinds()}.
  * When a cast keybind is press-edged or a long cast is in progress:
  * <ul>
@@ -41,7 +41,7 @@ import yesman.epicfight.api.client.camera.EpicFightCameraAPI;
  *       skipped (lock-on already wants the body facing the target).</li>
  * </ul>
  */
-@Mod.EventBusSubscriber(modid = LockOnMovementFix.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
+@EventBusSubscriber(modid = LockOnMovementFix.MOD_ID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
 public final class QuickCastAimHandler {
 
     private QuickCastAimHandler() {}
@@ -49,8 +49,7 @@ public final class QuickCastAimHandler {
     private static boolean lastAnyCastDown = false;
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
-    public static void onClientTickStart(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.START) return;
+    public static void onClientTickStart(ClientTickEvent.Pre event) {
         if (!IntegrationRegistry.isIronsSpells()) {
             lastAnyCastDown = false;
             return;

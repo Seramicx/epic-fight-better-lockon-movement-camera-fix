@@ -18,10 +18,10 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 import org.slf4j.Logger;
 import yesman.epicfight.api.animation.types.EntityState;
 import yesman.epicfight.api.client.camera.EpicFightCameraAPI;
@@ -36,14 +36,14 @@ import java.lang.reflect.Method;
  * best target using cone-based scoring. A mouse or right-stick flick switches
  * targets directionally. Toggled via a configurable keybind.
  *
- * <p>Flick reads raw cursor deltas at {@link TickEvent.Phase#START}, not
+ * <p>Flick reads raw cursor deltas at {@link ClientTickEvent.Pre}, not
  * {@link LocalPlayer#getYRot()}, because LockOnMovementHandler rewrites yaw
  * every tick while locked on (which read as constant mouse flicks).
  *
  * <p>Integrates with Epic Fight via its public camera API plus reflection
  * for the private {@code setFocusingEntity}/{@code sendTargeting} methods.
  */
-@Mod.EventBusSubscriber(modid = LockOnMovementFix.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
+@EventBusSubscriber(modid = LockOnMovementFix.MOD_ID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
 public class AutoLockOnHandler {
 
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -189,16 +189,18 @@ public class AutoLockOnHandler {
     // =====================================================================
 
     @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent event) {
+    public static void onClientTickPre(ClientTickEvent.Pre event) {
         if (MC.player == null || MC.level == null) return;
         if (MC.screen != null) return;
+        // MouseHandler.turnPlayer() consumes accumulatedDX later this tick;
+        // ClientTickEvent.Pre runs at the beginning of Minecraft.tick().
+        handleFlickTickStart();
+    }
 
-        if (event.phase == TickEvent.Phase.START) {
-            // MouseHandler.turnPlayer() consumes accumulatedDX later this tick; Forge
-            // ClientTick START runs at the beginning of Minecraft.tick().
-            handleFlickTickStart();
-            return;
-        }
+    @SubscribeEvent
+    public static void onClientTickPost(ClientTickEvent.Post event) {
+        if (MC.player == null || MC.level == null) return;
+        if (MC.screen != null) return;
 
         handleToggleKeybind();
 
