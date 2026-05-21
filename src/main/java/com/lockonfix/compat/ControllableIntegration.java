@@ -174,7 +174,7 @@ public final class ControllableIntegration {
                     if (targetYaw == 0F) return 0F;
                     // targetYaw is the raw stick value; degrees-per-frame is
                     // targetYaw * elapsedTicks (see comment block above).
-                    float elapsedTicks = Minecraft.getInstance().getDeltaFrameTime();
+                    float elapsedTicks = Minecraft.getInstance().getTimer().getRealtimeDeltaTicks();
                     return targetYaw * elapsedTicks;
                 } catch (Throwable t) {
                     return 0F;

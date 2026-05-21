@@ -3,14 +3,11 @@
   "minVersion": "0.8.5",
   "package": "com.lockonfix.mixin",
   "refmap": "lockonmovementfix.refmap.json",
-  "compatibilityLevel": "JAVA_17",
+  "compatibilityLevel": "JAVA_21",
   "mixins": [
     "DodgeSkillMixin"
   ],
   "client": [
-    "MixinBossesRiseRollDirection",
-    "MixinBossesRiseRollPreserveCamera",
-    "MixinBossesRiseRollVanillaRender",
     "MixinEntityViewRot",
     "MixinFixAttackLungeDirection",
     "MixinMinecraft",

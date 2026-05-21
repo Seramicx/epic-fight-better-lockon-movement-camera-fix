@@ -8,10 +8,10 @@ import net.minecraft.world.item.BowItem;
 import net.minecraft.world.item.CrossbowItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TridentItem;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 import yesman.epicfight.api.client.camera.EpicFightCameraAPI;
 
 /**
@@ -23,7 +23,7 @@ import yesman.epicfight.api.client.camera.EpicFightCameraAPI;
  * bails during aim and Epic Fight's per-tick yRot correction stays in
  * effect.
  */
-@Mod.EventBusSubscriber(modid = LockOnMovementFix.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
+@EventBusSubscriber(modid = LockOnMovementFix.MOD_ID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
 public final class EpicFightClientHooks {
 
     private static final long CAST_LATCH_MS = 500L;
@@ -50,8 +50,7 @@ public final class EpicFightClientHooks {
     // =====================================================================
 
     @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
+    public static void onClientTick(ClientTickEvent.Post event) {
         if (!IntegrationRegistry.isIronsSpells()) return;
 
         if (IronSpellsIntegration.anyCastKeymapDown() || IronSpellsIntegration.isCasting()) {
@@ -87,7 +86,7 @@ public final class EpicFightClientHooks {
         }
 
         // anyCastKeymapDown is checked directly so the press tick reports
-        // aiming immediately. The latch only refreshes in ClientTickEvent.END
+        // aiming immediately. The latch only refreshes in ClientTickEvent.Post
         // and would otherwise lag one tick.
         return castLatchActive()
                 || IronSpellsIntegration.isCasting()
