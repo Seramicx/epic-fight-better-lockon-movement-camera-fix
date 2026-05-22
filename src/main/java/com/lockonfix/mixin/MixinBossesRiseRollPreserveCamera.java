@@ -43,7 +43,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * <p>{@code @Pseudo} so the mod still loads when Bosses'Rise is absent.
  */
 @Pseudo
-@Mixin(targets = "net.unusual.block_factorys_bosses.capability.entity.RollCap$RollCapHandler", remap = false)
+@Mixin(targets = "net.unusual.block_factorys_bosses.attachment.entity.RollAttachment", remap = false)
 public class MixinBossesRiseRollPreserveCamera {
 
     @Unique private float lockonfix$savedYRot;

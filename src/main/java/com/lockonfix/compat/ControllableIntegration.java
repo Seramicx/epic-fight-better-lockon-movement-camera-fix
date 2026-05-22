@@ -6,7 +6,6 @@ import net.minecraft.client.player.Input;
 import org.slf4j.Logger;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 
 /**
  * Controllable integration. When Controllable is present, analog stick values
@@ -89,32 +88,23 @@ public final class ControllableIntegration {
     // =====================================================================
     //
     // Controllable stores the right-stick-driven yaw turn for this frame in
-    // a private float on its singleton input handler. Reading it lets
-    // AutoLockOnHandler's flick detection treat controller turns the same
-    // as mouse turns. (Controllable calls mc.player.turn(...) directly,
-    // bypassing MouseHandler, so accumulatedDX never reflects right-stick
-    // input.)
+    // CameraHandler.instance.yawDelta. Reading it lets AutoLockOnHandler's
+    // flick detection treat controller turns the same as mouse turns.
+    // (Controllable calls mc.player.turn(...) directly, bypassing
+    // MouseHandler, so accumulatedDX never reflects right-stick input.)
     //
-    // API path differs by Controllable version:
-    //   * 0.21.9+ (MC 1.20.1):  Controllable.getInput().targetYaw     (raw stick value)
-    //   * older:                CameraHandler.instance.yawDelta       (already degrees/frame)
-    //
-    // For 0.21.9+, the raw targetYaw is what's fed into player.turn as
-    // (targetYaw / 0.15) * elapsedTicks; player.turn then multiplies its
-    // arg by 0.15 to get degrees, so degrees-per-frame = targetYaw *
-    // elapsedTicks. We compute that here so the function's "degrees per
-    // frame" semantics match across Controllable versions.
-
-    private enum ApiPath { NONE, NEW_021_9, LEGACY }
+    // On Controllable 1.21.1 (multiloader branch), CameraHandler.updateRotationDelta
+    // computes yawDelta = yawSpeed * thumbstickX (raw per-tick stick value).
+    // CameraHandler.updateCamera then applies it as:
+    //   elapsedDeltaYaw = yawDelta * elapsedTicks
+    //   mc.player.turn(elapsedDeltaYaw, ...)   // turn() multiplies arg by 0.15
+    // So the camera actually moves yawDelta * elapsedTicks * 0.15 degrees
+    // this frame - that's what we return so it matches MouseHandler's
+    // degrees-per-frame semantics used by flick detection.
 
     private static boolean cameraReflectionInitialized = false;
-    private static ApiPath apiPath = ApiPath.NONE;
+    private static boolean cameraReflectionResolved = false;
 
-    // 0.21.9+
-    private static Method getInputMethod = null;
-    private static Field targetYawField = null;
-
-    // legacy
     private static Field cameraHandlerInstanceField = null;
     private static Field cameraHandlerYawDeltaField = null;
 
@@ -123,25 +113,6 @@ public final class ControllableIntegration {
         cameraReflectionInitialized = true;
         if (!IntegrationRegistry.isControllable()) return;
 
-        // Try Controllable 0.21.9+ first.
-        try {
-            Class<?> controllableClass = Class.forName("com.mrcrayfish.controllable.Controllable");
-            getInputMethod = controllableClass.getMethod("getInput");
-            Class<?> controllerInputClass = Class.forName(
-                "com.mrcrayfish.controllable.client.ControllerInput");
-            targetYawField = controllerInputClass.getDeclaredField("targetYaw");
-            targetYawField.setAccessible(true);
-            apiPath = ApiPath.NEW_021_9;
-            LOGGER.info("Controllable: ControllerInput.targetYaw resolved (0.21.9+ API)");
-            return;
-        } catch (Throwable t) {
-            LOGGER.debug("Controllable: 0.21.9+ API not present ({}), trying legacy CameraHandler",
-                    t.getMessage());
-            getInputMethod = null;
-            targetYawField = null;
-        }
-
-        // Fall back to older Controllable versions (CameraHandler.instance.yawDelta).
         try {
             Class<?> cameraHandlerClass = Class.forName(
                 "com.mrcrayfish.controllable.client.CameraHandler");
@@ -149,12 +120,12 @@ public final class ControllableIntegration {
             cameraHandlerInstanceField.setAccessible(true);
             cameraHandlerYawDeltaField = cameraHandlerClass.getDeclaredField("yawDelta");
             cameraHandlerYawDeltaField.setAccessible(true);
-            apiPath = ApiPath.LEGACY;
-            LOGGER.info("Controllable: CameraHandler.yawDelta resolved (legacy API)");
+            cameraReflectionResolved = true;
+            LOGGER.info("Controllable: CameraHandler.yawDelta resolved");
         } catch (Throwable t) {
-            LOGGER.warn("Controllable: neither 0.21.9+ nor legacy reflection resolved ({}), controller-flick targeting disabled",
+            LOGGER.warn("Controllable: CameraHandler reflection failed ({}), controller-flick targeting disabled",
                     t.getMessage());
-            apiPath = ApiPath.NONE;
+            cameraReflectionResolved = false;
         }
     }
 
@@ -165,31 +136,16 @@ public final class ControllableIntegration {
      */
     public static float getCameraYawDelta() {
         initCameraReflection();
-        switch (apiPath) {
-            case NEW_021_9:
-                try {
-                    Object input = getInputMethod.invoke(null);
-                    if (input == null) return 0F;
-                    float targetYaw = targetYawField.getFloat(input);
-                    if (targetYaw == 0F) return 0F;
-                    // targetYaw is the raw stick value; degrees-per-frame is
-                    // targetYaw * elapsedTicks (see comment block above).
-                    float elapsedTicks = Minecraft.getInstance().getTimer().getRealtimeDeltaTicks();
-                    return targetYaw * elapsedTicks;
-                } catch (Throwable t) {
-                    return 0F;
-                }
-            case LEGACY:
-                try {
-                    Object instance = cameraHandlerInstanceField.get(null);
-                    if (instance == null) return 0F;
-                    return cameraHandlerYawDeltaField.getFloat(instance);
-                } catch (Throwable t) {
-                    return 0F;
-                }
-            case NONE:
-            default:
-                return 0F;
+        if (!cameraReflectionResolved) return 0F;
+        try {
+            Object instance = cameraHandlerInstanceField.get(null);
+            if (instance == null) return 0F;
+            float yawDelta = cameraHandlerYawDeltaField.getFloat(instance);
+            if (yawDelta == 0F) return 0F;
+            float elapsedTicks = Minecraft.getInstance().getTimer().getRealtimeDeltaTicks();
+            return yawDelta * elapsedTicks * 0.15F;
+        } catch (Throwable t) {
+            return 0F;
         }
     }
 }

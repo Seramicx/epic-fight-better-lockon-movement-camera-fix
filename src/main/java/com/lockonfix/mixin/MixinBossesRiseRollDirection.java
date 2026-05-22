@@ -49,10 +49,10 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 public class MixinBossesRiseRollDirection {
 
     @Redirect(
-        method = "m_7249_",
+        method = "setDown",
         at = @At(
             value = "FIELD",
-            target = "Lnet/minecraft/client/player/Input;f_108566_:F",
+            target = "Lnet/minecraft/client/player/Input;forwardImpulse:F",
             opcode = org.objectweb.asm.Opcodes.GETFIELD
         ),
         require = 0,
@@ -63,10 +63,10 @@ public class MixinBossesRiseRollDirection {
     }
 
     @Redirect(
-        method = "m_7249_",
+        method = "setDown",
         at = @At(
             value = "FIELD",
-            target = "Lnet/minecraft/client/player/Input;f_108567_:F",
+            target = "Lnet/minecraft/client/player/Input;leftImpulse:F",
             opcode = org.objectweb.asm.Opcodes.GETFIELD
         ),
         require = 0,

@@ -8,6 +8,9 @@
     "DodgeSkillMixin"
   ],
   "client": [
+    "MixinBossesRiseRollDirection",
+    "MixinBossesRiseRollPreserveCamera",
+    "MixinBossesRiseRollVanillaRender",
     "MixinEntityViewRot",
     "MixinFixAttackLungeDirection",
     "MixinMinecraft",

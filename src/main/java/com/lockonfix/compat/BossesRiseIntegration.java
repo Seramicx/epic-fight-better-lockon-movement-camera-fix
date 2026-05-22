@@ -5,19 +5,22 @@ import net.minecraft.world.entity.player.Player;
 import org.slf4j.Logger;
 
 import java.lang.reflect.Method;
-import java.util.Optional;
 
 /**
  * Bosses'Rise (block_factorys_bosses) integration. Every public method is a
  * no-op when Bosses'Rise is not installed (checked via
  * {@link IntegrationRegistry}). Reflection is resolved lazily on first call
  * and cached.
+ *
+ * <p>BR 2.x for NeoForge 1.21.1 replaced the Forge capability
+ * {@code RollCap} (returned {@code Optional<RollCap>}) with the
+ * data-attachment {@code RollAttachment} (returned directly).
  */
 public final class BossesRiseIntegration {
 
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final String ROLL_CAP_CLASS =
-            "net.unusual.block_factorys_bosses.capability.entity.RollCap";
+    private static final String ROLL_ATTACHMENT_CLASS =
+            "net.unusual.block_factorys_bosses.attachment.entity.RollAttachment";
 
     private static Method fromPlayerMethod = null;
     private static Method isRollingMethod = null;
@@ -31,10 +34,10 @@ public final class BossesRiseIntegration {
         if (!IntegrationRegistry.isBossesRise()) return;
 
         try {
-            Class<?> rollCapClass = Class.forName(ROLL_CAP_CLASS);
-            fromPlayerMethod = rollCapClass.getMethod("fromPlayer", Player.class);
-            isRollingMethod = rollCapClass.getMethod("isRolling");
-            LOGGER.info("BossesRise integration: resolved RollCap.fromPlayer + RollCap.isRolling");
+            Class<?> rollAttachmentClass = Class.forName(ROLL_ATTACHMENT_CLASS);
+            fromPlayerMethod = rollAttachmentClass.getMethod("fromPlayer", Player.class);
+            isRollingMethod = rollAttachmentClass.getMethod("isRolling");
+            LOGGER.info("BossesRise integration: resolved RollAttachment.fromPlayer + RollAttachment.isRolling");
         } catch (Throwable t) {
             LOGGER.warn("BossesRise integration failed to resolve: {}", t.toString());
             fromPlayerMethod = null;
@@ -43,19 +46,16 @@ public final class BossesRiseIntegration {
     }
 
     /**
-     * @return true if BR is loaded, the player has a {@code RollCap}, and that
-     *         cap reports {@code isRolling()}. Any reflection failure or absent
-     *         cap returns false.
+     * @return true if BR is loaded and that player's {@code RollAttachment}
+     *         reports {@code isRolling()}. Any reflection failure returns false.
      */
     public static boolean isRolling(Player player) {
         resolve();
         if (player == null || fromPlayerMethod == null || isRollingMethod == null) return false;
         try {
-            Object opt = fromPlayerMethod.invoke(null, player);
-            if (!(opt instanceof Optional<?> optional)) return false;
-            Object rollCap = optional.orElse(null);
-            if (rollCap == null) return false;
-            Object result = isRollingMethod.invoke(rollCap);
+            Object attachment = fromPlayerMethod.invoke(null, player);
+            if (attachment == null) return false;
+            Object result = isRollingMethod.invoke(attachment);
             return result instanceof Boolean b && b;
         } catch (Throwable t) {
             return false;
