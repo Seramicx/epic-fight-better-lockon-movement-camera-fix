@@ -10,7 +10,6 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
-import net.neoforged.neoforge.common.NeoForge;
 import org.slf4j.Logger;
 
 @Mod(LockOnMovementFix.MOD_ID)
@@ -27,7 +26,6 @@ public class LockOnMovementFix {
         modBus.addListener(this::onCommonSetup);
         modBus.addListener(this::onRegisterKeyMappings);
 
-        NeoForge.EVENT_BUS.register(this);
         LOGGER.info("Epic Fight x Better Lock On: Movement Fixes (NeoForge 1.21.1) loaded.");
     }
 
