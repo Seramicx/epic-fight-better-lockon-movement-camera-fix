@@ -21,7 +21,7 @@ public abstract class MixinMouseHandler {
 
     @Shadow private double accumulatedDX;
 
-    @Inject(method = "turnPlayer()V", at = @At("HEAD"))
+    @Inject(method = "turnPlayer(D)V", at = @At("HEAD"))
     private void lockonfix$captureMouseDx(CallbackInfo ci) {
         AutoLockOnHandler.recordMouseDx(this.accumulatedDX);
     }
