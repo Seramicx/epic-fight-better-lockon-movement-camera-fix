@@ -31,9 +31,9 @@ import yesman.epicfight.skill.dodge.DodgeSkill;
  * and use the camera yaw as the base, so dodges go where the user expects
  * relative to the screen.
  *
- * <p>1.21.1 API note: the old {@code getExecutionPacket} path was replaced
- * with {@code gatherArguments(SkillContainer, ControlEngine, CompoundTag)};
- * we write {@code "direction"} (int) and {@code "yRot"} (float) into the
+ * <p>Hook target on 1.21.1 is
+ * {@code gatherArguments(SkillContainer, ControlEngine, CompoundTag)}: we
+ * write {@code "direction"} (int) and {@code "yRot"} (float) into the
  * CompoundTag and cancel the original to skip its 8-way calculation.
  *
  * <p>Interaction with epicfight_extra: defers on digital input only; for

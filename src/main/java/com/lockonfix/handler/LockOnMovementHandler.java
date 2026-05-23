@@ -6,7 +6,6 @@ import com.lockonfix.client.EpicFightClientHooks;
 import com.lockonfix.compat.ControllableIntegration;
 import com.lockonfix.compat.IntegrationRegistry;
 import com.lockonfix.compat.ValkyrienSkiesIntegration;
-import com.mojang.logging.LogUtils;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.Input;
@@ -20,7 +19,6 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.MovementInputUpdateEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
-import org.slf4j.Logger;
 import yesman.epicfight.api.animation.types.EntityState;
 import yesman.epicfight.api.client.camera.EpicFightCameraAPI;
 import yesman.epicfight.world.capabilities.EpicFightCapabilities;
@@ -35,7 +33,6 @@ import yesman.epicfight.client.world.capabilites.entitypatch.player.LocalPlayerP
 @EventBusSubscriber(modid = LockOnMovementFix.MOD_ID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
 public class LockOnMovementHandler {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
     private static final Minecraft MC = Minecraft.getInstance();
 
     private static final float DEFAULT_TURN_SPEED = 0.45F;

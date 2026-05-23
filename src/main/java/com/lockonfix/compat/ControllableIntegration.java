@@ -58,9 +58,9 @@ public final class ControllableIntegration {
      * against handlers that rewrite {@link Input#forwardImpulse}/
      * {@code leftImpulse} to fractional values during keyboard play (e.g.
      * {@code LockOnMovementHandler}'s 1st-person sprint sets
-     * {@code forwardImpulse = sqrt(2)} ≈ 1.414, which used to falsely
-     * trip the fractional check and send camera-relative dodges down the
-     * analog branch).
+     * {@code forwardImpulse = sqrt(2)} ≈ 1.414, which would otherwise
+     * trip the fractional check and send camera-relative dodges down
+     * the analog branch).
      *
      * <p>Only after we've ruled out keyboard do we fall back to the
      * fractional-impulse heuristic for actual stick input.
