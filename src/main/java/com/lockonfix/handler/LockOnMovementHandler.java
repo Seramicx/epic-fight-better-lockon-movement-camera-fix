@@ -5,7 +5,6 @@ import com.lockonfix.LockOnMovementFix;
 import com.lockonfix.client.EpicFightClientHooks;
 import com.lockonfix.compat.ControllableIntegration;
 import com.lockonfix.compat.IntegrationRegistry;
-import com.lockonfix.compat.ValkyrienSkiesIntegration;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.Input;
@@ -70,16 +69,7 @@ public class LockOnMovementHandler {
     private static float getYawToTarget(LocalPlayer player, LivingEntity target) {
         double dx = target.getX() - player.getX();
         double dz = target.getZ() - player.getZ();
-        float worldYaw = (float) (Mth.atan2(dz, dx) * (180.0 / Math.PI)) - 90.0F;
-
-        // On a VS2 ship, player.yRot is in ship-local space. Convert the
-        // world-space target yaw to ship-local so setYRot() points at the
-        // target in world space after VS2's render-time transform.
-        if (IntegrationRegistry.isValkyrienSkies()
-                && ValkyrienSkiesIntegration.isMountedOnShip(player)) {
-            return ValkyrienSkiesIntegration.worldYawToShipYaw(player, worldYaw);
-        }
-        return worldYaw;
+        return (float) (Mth.atan2(dz, dx) * (180.0 / Math.PI)) - 90.0F;
     }
 
     private static float smoothAngle(float from, float to, float factor) {
