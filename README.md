@@ -22,7 +22,7 @@ Souls-style movement, dodge, and aim fixes for Epic Fight. Better Lock On integr
 
 ## Optional integrations
 
-Auto-detected if installed: Better Lockon, Iron's Spells 'n Spellbooks, Bosses' Rise, FTB Teams, Controllable. Each integration only turns on if the relevant mod is loaded.
+Auto-detected if installed: Better Lockon, Iron's Spells 'n Spellbooks, Bosses' Rise, FTB Teams, Controllable, Valkyrien Skies 2. Each integration only turns on if the relevant mod is loaded.
 
 ## Companion mods
 
