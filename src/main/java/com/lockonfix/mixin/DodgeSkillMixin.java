@@ -74,15 +74,14 @@ public abstract class DodgeSkillMixin {
         //     from its decoupled internal yaw (mouse direction).
         //   - Vanilla 3rd-person: Camera.yRot follows player.yRot.
         //
-        // We previously read SSR's internal camera.yRot directly, but during
-        // lock-on it drifts each frame: EpicFight's syncLockOnRotations
-        // resets it to target direction once per frame, then SSR's renderTick
-        // followPlayerRotations lerps it toward player.yRot (= movement
-        // direction during sprint+lockon). Reading SSR's cam between frames
-        // therefore gave intermediate, unpredictable values, and the dodge
-        // angle was often wrong during sprint+lockon. The final vanilla
-        // Camera.yRot doesn't have that drift problem because EpicFight's
-        // correctCamera writes target direction at the end of each frame.
+        // We read the final vanilla Camera.yRot rather than SSR's internal
+        // camera.yRot: during lock-on, SSR's value drifts each frame
+        // (EpicFight's syncLockOnRotations resets it to target direction,
+        // then SSR's renderTick followPlayerRotations lerps it back toward
+        // player.yRot = movement direction during sprint+lockon), giving
+        // intermediate, unpredictable values mid-frame. The vanilla
+        // Camera.yRot is stable because EpicFight's correctCamera writes
+        // target direction at the end of each frame.
         float cameraYaw = mc.gameRenderer.getMainCamera().getYRot();
 
         float offsetDegrees;
