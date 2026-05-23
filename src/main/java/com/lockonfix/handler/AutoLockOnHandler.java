@@ -236,8 +236,8 @@ public class AutoLockOnHandler {
 
         // Reset flick state any tick the flick handler isn't valid: not
         // locked on, no target, or neither auto-lockon nor the 1st-person
-        // BLO-gap path is active. Previously we reset whenever
-        // !autoLockOnEnabled, which killed accumulation in 1st person.
+        // BLO-gap path is active. Gating on !autoLockOnEnabled alone would
+        // kill accumulation in 1st person where the BLO-gap path runs.
         boolean isFirstPerson = MC.options.getCameraType() == CameraType.FIRST_PERSON;
         boolean bloGapInFirstPerson = isFirstPerson && IntegrationRegistry.isBetterLockOn();
         boolean flickActive = autoLockOnEnabled || bloGapInFirstPerson;
@@ -337,8 +337,6 @@ public class AutoLockOnHandler {
     /**
      * Vanilla per-tick yaw delta from a horizontal cursor delta. Mirrors
      * MouseHandler.turnPlayer: f = sens*0.6+0.2, f1 = f*f*f*8, dy = dx*f1.
-     * The earlier implementation cubed (dx*sens) which made small movements
-     * vanish quickly and large ones explode -- not at all the same shape.
      */
     private static double mouseDxToYawDegrees(double dx) {
         if (dx == 0) return 0;
