@@ -4,9 +4,6 @@ import com.mojang.logging.LogUtils;
 import net.minecraftforge.fml.ModList;
 import org.slf4j.Logger;
 
-/**
- * Mod-detection layer. Every companion mod is optional.
- */
 public final class IntegrationRegistry {
 
     private static final Logger LOGGER = LogUtils.getLogger();

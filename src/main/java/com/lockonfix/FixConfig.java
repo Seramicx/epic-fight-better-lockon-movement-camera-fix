@@ -2,10 +2,6 @@ package com.lockonfix;
 
 import net.minecraftforge.common.ForgeConfigSpec;
 
-/**
- * Configuration for the Lock-On Movement Fix mod.
- * Config file: lockonmovementfix-client.toml
- */
 public class FixConfig {
 
     public static final ForgeConfigSpec CLIENT_CONFIG;

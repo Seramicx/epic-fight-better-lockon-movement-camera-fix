@@ -8,12 +8,6 @@ import org.slf4j.Logger;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
-/**
- * Controllable integration. When Controllable is present, analog stick values
- * flow through vanilla {@link Input#forwardImpulse}/{@code leftImpulse} as
- * fractional floats. When absent, the impulse values are ±1/0 from keyboard
- * and every public method degrades gracefully.
- */
 public final class ControllableIntegration {
 
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -21,11 +15,6 @@ public final class ControllableIntegration {
 
     private ControllableIntegration() {}
 
-    /**
-     * Read the analog direction from the Input, applying a deadzone.
-     * Returns {forward, strafe} with values in [-1, 1].
-     * When below the deadzone, returns {0, 0}.
-     */
     public static float[] readAnalogDirection(Input input) {
         float forward = input.forwardImpulse;
         float strafe  = input.leftImpulse;
@@ -38,10 +27,6 @@ public final class ControllableIntegration {
         return new float[]{forward, strafe};
     }
 
-    /**
-     * Analog stick magnitude, clamped to [0, 1]. Useful for scaling
-     * movement speed or other magnitude-dependent behaviors.
-     */
     public static float getAnalogMagnitude(Input input) {
         float forward = input.forwardImpulse;
         float strafe  = input.leftImpulse;
@@ -50,22 +35,6 @@ public final class ControllableIntegration {
         return Math.min(mag, 1.0F);
     }
 
-    /**
-     * Whether the current directional input is analog (controller stick)
-     * rather than digital (keyboard or none).
-     *
-     * <p>Keyboard takes precedence: if any of W/A/S/D is physically down
-     * we treat input as digital, regardless of impulse values. This guards
-     * against handlers that rewrite {@link Input#forwardImpulse}/
-     * {@code leftImpulse} to fractional values during keyboard play (e.g.
-     * {@code LockOnMovementHandler}'s 1st-person sprint sets
-     * {@code forwardImpulse = sqrt(2)} ≈ 1.414, which would otherwise
-     * trip the fractional check and send camera-relative dodges down
-     * the analog branch).
-     *
-     * <p>Only after we've ruled out keyboard do we fall back to the
-     * fractional-impulse heuristic for actual stick input.
-     */
     public static boolean isAnalogInput(Input input) {
         if (!IntegrationRegistry.isControllable()) return false;
         Minecraft mc = Minecraft.getInstance();
@@ -84,37 +53,14 @@ public final class ControllableIntegration {
         return abs > 0.01F && Math.abs(abs - 1.0F) > 0.01F;
     }
 
-    // =====================================================================
-    // Controller right-stick yaw delta (degrees per frame, sign = direction)
-    // =====================================================================
-    //
-    // Controllable stores the right-stick-driven yaw turn for this frame in
-    // a private float on its singleton input handler. Reading it lets
-    // AutoLockOnHandler's flick detection treat controller turns the same
-    // as mouse turns. (Controllable calls mc.player.turn(...) directly,
-    // bypassing MouseHandler, so accumulatedDX never reflects right-stick
-    // input.)
-    //
-    // API path differs by Controllable version:
-    //   * 0.21.9+ (MC 1.20.1):  Controllable.getInput().targetYaw     (raw stick value)
-    //   * older:                CameraHandler.instance.yawDelta       (already degrees/frame)
-    //
-    // For 0.21.9+, the raw targetYaw is what's fed into player.turn as
-    // (targetYaw / 0.15) * elapsedTicks; player.turn then multiplies its
-    // arg by 0.15 to get degrees, so degrees-per-frame = targetYaw *
-    // elapsedTicks. We compute that here so the function's "degrees per
-    // frame" semantics match across Controllable versions.
-
     private enum ApiPath { NONE, NEW_021_9, LEGACY }
 
     private static boolean cameraReflectionInitialized = false;
     private static ApiPath apiPath = ApiPath.NONE;
 
-    // 0.21.9+
     private static Method getInputMethod = null;
     private static Field targetYawField = null;
 
-    // legacy
     private static Field cameraHandlerInstanceField = null;
     private static Field cameraHandlerYawDeltaField = null;
 
@@ -123,7 +69,6 @@ public final class ControllableIntegration {
         cameraReflectionInitialized = true;
         if (!IntegrationRegistry.isControllable()) return;
 
-        // Try Controllable 0.21.9+ first.
         try {
             Class<?> controllableClass = Class.forName("com.mrcrayfish.controllable.Controllable");
             getInputMethod = controllableClass.getMethod("getInput");
@@ -141,7 +86,6 @@ public final class ControllableIntegration {
             targetYawField = null;
         }
 
-        // Fall back to older Controllable versions (CameraHandler.instance.yawDelta).
         try {
             Class<?> cameraHandlerClass = Class.forName(
                 "com.mrcrayfish.controllable.client.CameraHandler");
@@ -158,11 +102,6 @@ public final class ControllableIntegration {
         }
     }
 
-    /**
-     * Returns Controllable's right-stick yaw delta for this frame in degrees.
-     * Positive = right, negative = left. Returns 0 if Controllable is absent
-     * or reflection failed.
-     */
     public static float getCameraYawDelta() {
         initCameraReflection();
         switch (apiPath) {
@@ -172,8 +111,6 @@ public final class ControllableIntegration {
                     if (input == null) return 0F;
                     float targetYaw = targetYawField.getFloat(input);
                     if (targetYaw == 0F) return 0F;
-                    // targetYaw is the raw stick value; degrees-per-frame is
-                    // targetYaw * elapsedTicks (see comment block above).
                     float elapsedTicks = Minecraft.getInstance().getDeltaFrameTime();
                     return targetYaw * elapsedTicks;
                 } catch (Throwable t) {

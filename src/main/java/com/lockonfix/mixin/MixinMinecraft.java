@@ -16,24 +16,6 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import yesman.epicfight.api.client.camera.EpicFightCameraAPI;
 
-/**
- * Shoulder-offset parallax fix for items that fire on use-start (buckets,
- * Iron's Spells instant-cast items, spawn eggs, fishing rod). The bow/
- * crossbow/trident "fires on release" path is handled separately in
- * {@link MixinMultiPlayerGameMode}.
- *
- * <p>At {@code HEAD} (priority 1500, before Epic Fight's default 1000):
- * snapshot {@code yRot}/{@code xRot}/{@code yHeadRot}/{@code yBodyRot}, call
- * {@code alignPlayerLookToCrosshair(false, false, true)} to aim at
- * {@code crosshairHit - playerEye} and send
- * {@code ServerboundMovePlayerPacket.Rot} synchronously. Vanilla's
- * {@code gameMode.useItem} call inside the method body then sends
- * {@code ServerboundUseItemPacket} <em>after</em> our rotation packet,
- * so the server raycast (bucket) or server spell fire uses the corrected
- * yaw. At {@code RETURN} we restore the snapshot: all four values flip
- * back inside the same synchronous call, with no render frame in between,
- * so the camera and body never visibly rotate.
- */
 @Mixin(value = Minecraft.class, priority = 1500)
 public abstract class MixinMinecraft {
 
@@ -46,13 +28,6 @@ public abstract class MixinMinecraft {
     @Unique private static boolean lockonfix$keybinds$wasLocked;
     @Unique private static boolean lockonfix$keybinds$wasTPB;
 
-    /**
-     * EpicFight's MixinMinecraft auto-cancels lock-on whenever the camera type
-     * is not THIRD_PERSON_BACK (see its INVOKE-AFTER inject on setCameraType
-     * in handleKeybinds). That makes F5 → 1st person silently kill an active
-     * lock-on. Restore it here so the player can stay locked on while in
-     * first person.
-     */
     @Inject(method = "handleKeybinds()V", at = @At("HEAD"))
     private void lockonfix$captureLockOnState(CallbackInfo ci) {
         try {
@@ -103,10 +78,6 @@ public abstract class MixinMinecraft {
         }
         if (api == null) return;
 
-        // When locked on, the lock-on auto-face handler keeps yRot aligned to
-        // the target. Forcing crosshair direction here would steer the use-item
-        // packet (bucket place, instant right-click spell, etc.) toward the
-        // camera-hit point instead of the target.
         if (api.isLockingOnTarget()) return;
 
         lockonfix$origYRot = player.getYRot();

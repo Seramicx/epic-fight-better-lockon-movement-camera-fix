@@ -19,6 +19,7 @@ Souls-style movement, dodge, and aim fixes for Epic Fight. Better Lock On integr
 - Mouse-flick target switching. A quick mouse flick left or right cycles to the next target in that direction. Right-stick flick works with Controllable.
 - Body auto-faces the locked target while blocking or holding a charged spell.
 - Bosses' Rise compat: the BR roll uses WASD direction relative to the camera, the camera stays put during the roll, and the vanilla render is preserved.
+- Valkyrien Skies 2 compat: lock-on auto-face still aims at the target when you're standing on a moving ship.
 
 ## Optional integrations
 

@@ -11,25 +11,6 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import yesman.epicfight.api.client.camera.EpicFightCameraAPI;
 
-/**
- * Override {@code LocalPlayer.getViewYRot/getViewXRot} when locked-on in
- * 1st person, returning BLO's {@code cameraYRot/cameraXRot} partial-tick
- * lerp directly.
- *
- * <p>Why: BLO's {@code setupCamera} per-frame writes {@code player.yRot} to
- * the cameraYRot lerp value. Vanilla {@code Camera.setup} then renders
- * using {@code entity.getViewYRot(partialTick)}. For LocalPlayer this
- * dispatches to LocalPlayer's OVERRIDE of getViewYRot (NOT the Entity
- * default), which uses {@code Mth.lerp(yRotO, yRot, partialTick)}. If yRot
- * gets a wild value (mouse rotation, sprint-backward) and yRotO gets
- * unwrapped by 360, the lerp sweeps across that gap each render frame
- * -- visible camera jitter.
- *
- * <p>By bypassing the lerp and returning BLO's already-lerped cameraYRot,
- * the camera always renders at the target-tracking value regardless of
- * what player.yRot is. yRot stays free for vanilla travel() to use during
- * the tick.
- */
 @Mixin(LocalPlayer.class)
 public abstract class MixinEntityViewRot {
 

@@ -7,22 +7,6 @@ import org.slf4j.Logger;
 import java.lang.reflect.Method;
 import java.util.UUID;
 
-/**
- * FTB Teams compat. Reflection-only so the mod remains soft-optional.
- *
- * <p>The FTB Teams 1.20.1 API exposes everything we need client-side:
- * <pre>
- *   FTBTeamsAPI.api()                          -> API
- *   API.isClientManagerLoaded()                -> boolean
- *   API.getClientManager()                     -> ClientTeamManager
- *   ClientTeamManager.selfTeam()               -> Team
- *   Team.getRankForPlayer(UUID)                -> TeamRank
- *   TeamRank.isAllyOrBetter()                  -> boolean
- * </pre>
- * We resolve those via reflection once and cache the {@link Method} handles.
- * Any failure short-circuits {@link #isAllyOrSameTeam(Player)} to false so
- * the regular target-selection path is unaffected.</p>
- */
 public final class FTBTeamsIntegration {
 
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -66,11 +50,6 @@ public final class FTBTeamsIntegration {
         }
     }
 
-    /**
-     * True when {@code target} is on the same team as the local player, or
-     * otherwise ranked at or above ALLY by FTB Teams. False when FTB Teams
-     * isn't loaded, the manager isn't ready, or reflection fails.
-     */
     public static boolean isAllyOrSameTeam(Player target) {
         if (target == null) return false;
         if (!IntegrationRegistry.isFtbTeams()) return false;

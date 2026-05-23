@@ -8,20 +8,11 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.List;
 
-/**
- * Iron's Spellbooks integration. Every public method is a no-op when Iron's
- * Spells is not installed (checked via {@link IntegrationRegistry}).
- * Reflection is resolved lazily on first call and cached.
- */
 public final class IronSpellsIntegration {
 
     private static final Logger LOGGER = LogUtils.getLogger();
 
     private IronSpellsIntegration() {}
-
-    // =====================================================================
-    // ClientMagicData reflection
-    // =====================================================================
 
     private static Method isCastingMethod = null;
     private static Method castDurationRemainingMethod = null;
@@ -91,10 +82,6 @@ public final class IronSpellsIntegration {
         }
     }
 
-    // =====================================================================
-    // Selected-spell CastType (for INSTANT snap on right-click)
-    // =====================================================================
-
     private static Method getSpellSelectionManagerMethod = null;
     private static Method getSelectionMethod = null;
     private static Field  selectionSpellDataField = null;
@@ -143,10 +130,6 @@ public final class IronSpellsIntegration {
         }
     }
 
-    // =====================================================================
-    // Cast keybinds (SPELLBOOK_CAST_ACTIVE_KEYMAP + 15 QUICK_CAST_MAPPINGS)
-    // =====================================================================
-
     private static Field activeCastKeymapField = null;
     private static Field quickCastKeymapsField = null;
     private static boolean keymapsResolved = false;
@@ -185,11 +168,6 @@ public final class IronSpellsIntegration {
         return false;
     }
 
-    // =====================================================================
-    // Stack-item check
-    // =====================================================================
-
-    /** True if the item's class is from the Iron's Spells package. */
     public static boolean isIronsItem(net.minecraft.world.item.Item item) {
         if (!IntegrationRegistry.isIronsSpells() || item == null) return false;
         return item.getClass().getName().startsWith("io.redspace.ironsspellbooks");

@@ -31,100 +31,36 @@ import yesman.epicfight.client.world.capabilites.entitypatch.player.LocalPlayerP
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
-/**
- * Elden Ring-style auto lock-on. When the current target dies, picks the next
- * best target using cone-based scoring. A mouse or right-stick flick switches
- * targets directionally. Toggled via a configurable keybind.
- *
- * <p>Flick reads raw cursor deltas at {@link TickEvent.Phase#START}, not
- * {@link LocalPlayer#getYRot()}, because LockOnMovementHandler rewrites yaw
- * every tick while locked on (which read as constant mouse flicks).
- *
- * <p>Integrates with Epic Fight via its public camera API plus reflection
- * for the private {@code setFocusingEntity}/{@code sendTargeting} methods.
- */
 @Mod.EventBusSubscriber(modid = LockOnMovementFix.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
 public class AutoLockOnHandler {
 
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final Minecraft MC = Minecraft.getInstance();
 
-    // =====================================================================
-    // State
-    // =====================================================================
-
     private static boolean autoLockOnEnabled = false;
 
-    /** Track lock-on state across ticks; only used for death detection */
     private static boolean wasLockedOn = false;
     private static LivingEntity lastKnownTarget = null;
 
-    /** For continuity scoring (favors candidates near the previous target direction) */
     private static LivingEntity previousTarget = null;
 
-    /** After a target switch, ignore further switches for N ticks */
     private static int settlingDelay = 0;
-    private static final int SETTLING_TICKS = 3;
-
-    // =====================================================================
-    // Flick detection (raw mouse, not player yaw)
-    // =====================================================================
 
     private static double flickAccum = 0.0;
     private static int flickCooldown = 0;
 
-    private static final int FLICK_COOLDOWN_TICKS = 15;
-    /** Per-tick contribution below this is treated as tremor (see mouseDxToYawDegrees). */
-    private static final double MIN_TICK_DELTA_DEGREES = 3.0;
-    /**
-     * Ignore single-tick spikes larger than this (raw accumulatedDX pixels).
-     * Catches the "1000 pixel jump" you'd see resuming from pause/menu, but
-     * leaves room for a deliberate fast flick (which can easily exceed 400
-     * pixels in a single tick on a high-DPI mouse).
-     */
-    private static final double MAX_MOUSE_DX_PER_TICK = 1500.0;
-
-    /**
-     * Latest horizontal cursor delta as captured by MixinMouseHandler at HEAD
-     * of {@code MouseHandler.turnPlayer}, before vanilla zeroes the field.
-     * The mixin call site beats any reflection read at
-     * {@code ClientTickEvent.START}, which is racy across 1st/3rd person and
-     * across Forge/vanilla tick interleaving.
-     */
     private static volatile double capturedMouseDx = 0.0;
 
-    /** Called by MixinMouseHandler at HEAD of turnPlayer. */
     public static void recordMouseDx(double dx) {
         capturedMouseDx = dx;
     }
-
-    // =====================================================================
-    // Scoring weights
-    // =====================================================================
-
-    private static final double CONE_WEIGHT = 0.5;
-    private static final double DIST_WEIGHT = 0.3;
-    private static final double CONT_WEIGHT = 0.2;
-    private static final double MAX_CONE_ANGLE = 90.0;
-
-    // =====================================================================
-    // Reflection: EpicFightCameraAPI
-    // =====================================================================
 
     private static Field focusingEntityField = null;
     private static Method sendTargetingMethod = null;
     private static boolean reflectionInitialized = false;
 
-    // =====================================================================
-    // Reflection: MouseHandler accumulated cursor deltas (mapping fallbacks)
-    // =====================================================================
-
     private static Field mouseAccumDXField = null;
     private static boolean mouseReflectionInitialized = false;
-
-    // =====================================================================
-    // API cache
-    // =====================================================================
 
     private static EpicFightCameraAPI cachedAPI = null;
 
@@ -135,10 +71,6 @@ public class AutoLockOnHandler {
         }
         return cachedAPI;
     }
-
-    // =====================================================================
-    // Safe config reads
-    // =====================================================================
 
     private static boolean getFilterPlayers() {
         try { return FixConfig.FILTER_PLAYERS_FROM_AUTO_LOCKON.get(); }
@@ -160,17 +92,9 @@ public class AutoLockOnHandler {
         catch (Exception e) { return 64; }
     }
 
-    // =====================================================================
-    // Public API
-    // =====================================================================
-
     public static boolean isAutoLockOnEnabled() {
         return autoLockOnEnabled;
     }
-
-    // =====================================================================
-    // Movement-locked detection (reuse Epic Fight capabilities)
-    // =====================================================================
 
     private static boolean isInActionState(LocalPlayer player) {
         try {
@@ -184,18 +108,12 @@ public class AutoLockOnHandler {
         }
     }
 
-    // =====================================================================
-    // Main tick handler. START: flick detection; END: death, toggle, state
-    // =====================================================================
-
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (MC.player == null || MC.level == null) return;
         if (MC.screen != null) return;
 
         if (event.phase == TickEvent.Phase.START) {
-            // MouseHandler.turnPlayer() consumes accumulatedDX later this tick; Forge
-            // ClientTick START runs at the beginning of Minecraft.tick().
             handleFlickTickStart();
             return;
         }
@@ -224,7 +142,6 @@ public class AutoLockOnHandler {
                 }
 
                 if (targetDead) {
-                    // BLO has its own death auto-switch; don't race it.
                     if (!IntegrationRegistry.isBetterLockOn()) {
                         handleTargetLost(api);
                     }
@@ -232,10 +149,6 @@ public class AutoLockOnHandler {
             }
         }
 
-        // Reset flick state any tick the flick handler isn't valid: not
-        // locked on, no target, or neither auto-lockon nor the 1st-person
-        // BLO-gap path is active. Gating on !autoLockOnEnabled alone would
-        // kill accumulation in 1st person where the BLO-gap path runs.
         boolean isFirstPerson = MC.options.getCameraType() == CameraType.FIRST_PERSON;
         boolean bloGapInFirstPerson = isFirstPerson && IntegrationRegistry.isBetterLockOn();
         boolean flickActive = autoLockOnEnabled || bloGapInFirstPerson;
@@ -248,10 +161,6 @@ public class AutoLockOnHandler {
             lastKnownTarget = currentTarget;
         }
     }
-
-    // =====================================================================
-    // Toggle keybind
-    // =====================================================================
 
     private static void handleToggleKeybind() {
         if (LockOnMovementFix.TOGGLE_AUTO_LOCKON == null) return;
@@ -270,10 +179,6 @@ public class AutoLockOnHandler {
         }
     }
 
-    // =====================================================================
-    // Target death/removal -> auto-switch
-    // =====================================================================
-
     private static void handleTargetLost(EpicFightCameraAPI api) {
         previousTarget = lastKnownTarget;
 
@@ -284,7 +189,7 @@ public class AutoLockOnHandler {
                 api.setLockOn(true);
             }
             sendTargetingReflect(api, best);
-            settlingDelay = SETTLING_TICKS;
+            settlingDelay = 3;
         } else {
             if (api.isLockingOnTarget()) {
                 api.setLockOn(false);
@@ -292,10 +197,6 @@ public class AutoLockOnHandler {
             resetFlickState();
         }
     }
-
-    // =====================================================================
-    // MouseHandler reflection
-    // =====================================================================
 
     private static void initMouseReflection() {
         if (mouseReflectionInitialized) return;
@@ -317,10 +218,6 @@ public class AutoLockOnHandler {
     }
 
     private static double readMouseAccumDx() {
-        // capturedMouseDx is fed by MixinMouseHandler at HEAD of turnPlayer,
-        // which is the only timing-safe place to read accumulatedDX before
-        // vanilla zeroes it. Reflection fallback is kept for the case where
-        // the mixin failed to apply (e.g. mapping mismatch after a MC update).
         if (capturedMouseDx != 0.0) return capturedMouseDx;
 
         initMouseReflection();
@@ -332,24 +229,13 @@ public class AutoLockOnHandler {
         }
     }
 
-    /**
-     * Vanilla per-tick yaw delta from a horizontal cursor delta. Mirrors
-     * MouseHandler.turnPlayer: f = sens*0.6+0.2, f1 = f*f*f*8, dy = dx*f1.
-     */
     private static double mouseDxToYawDegrees(double dx) {
         if (dx == 0) return 0;
-        if (Math.abs(dx) > MAX_MOUSE_DX_PER_TICK) return 0;
-        
-        // Use EXACT vanilla mouse math. Better Lockon passes this exact 
-        // value into its own logic.
+        if (Math.abs(dx) > 1500.0) return 0;
         double sens = MC.options.sensitivity().get() * 0.6 + 0.2;
         double f1 = sens * sens * sens * 8.0;
-        return dx * f1; 
+        return dx * f1;
     }
-
-    // =====================================================================
-    // Flick tick (START phase only)
-    // =====================================================================
 
     private static void handleFlickTickStart() {
         EpicFightCameraAPI api = getAPI();
@@ -360,22 +246,14 @@ public class AutoLockOnHandler {
         LivingEntity currentTarget = api.getFocusingEntity();
         if (!isLockedOn || currentTarget == null || !currentTarget.isAlive()) return;
 
-        // Two activation paths:
-        //   - autoLockOnEnabled (user toggled): flick works in any camera mode.
-        //   - 1st person + BLO loaded: BLO's native flick is gated to non-FP
-        //     in EpicFightCameraAPIMixin (cancel = cameraType != FIRST_PERSON
-        //     && (TPS || locked)), so we cover the FP gap.
         boolean isFirstPerson = MC.options.getCameraType() == CameraType.FIRST_PERSON;
         boolean bloGapInFirstPerson = isFirstPerson && IntegrationRegistry.isBetterLockOn();
         if (!autoLockOnEnabled && !bloGapInFirstPerson) return;
         if (settlingDelay > 0) return;
         if (isInActionState(player)) return;
 
-        // BLO's accumulator decays at 0.98/tick. We mirror that.
         flickAccum *= 0.98;
 
-        // During cooldown: decay-only. NO accumulation while cooling down,
-        // so a single sustained mouse motion can't chain-fire flicks.
         if (flickCooldown > 0) {
             flickCooldown--;
             return;
@@ -386,26 +264,12 @@ public class AutoLockOnHandler {
         double stickDegrees = ControllableIntegration.getCameraYawDelta();
         double tickDegrees = yawDegrees + stickDegrees;
 
-        // 3rd person uses BLO native math: tickDegrees * 0.15. In 1st
-        // person, BLO's setupCamera per-frame writes player.yRot back to
-        // cameraYRot, so the user's mouse motion is invisible -- there's
-        // no kinesthetic feedback that they're "doing something". Boost
-        // the damper to 0.5 (3.3x BLO 3rd-person) so the flick triggers
-        // on a deliberate motion. The instant-snap below kills any
-        // visible camera lerp, so even rapid flicks stay clean.
         double damper = isFirstPerson ? 0.5 : 0.15;
         flickAccum += tickDegrees * damper;
 
         double threshold = getFlickSensitivity();
         if (Math.abs(flickAccum) <= threshold) return;
 
-        // BLO's setNextLockOnTarget(direction) picks the next target by
-        // screen X position. In 3rd person, mouse-right (positive accum)
-        // maps to direction=+1 (right target) intuitively. In 1st person,
-        // empirical observation: mouse-right swaps to a LEFT target with
-        // the 3rd-person sign, so the 1st-person sign is inverted. Likely
-        // due to how BLO's screen-X math interacts with the camera setup
-        // BLO does in 1st person locked-on (player.yRot override).
         int flickDir = isFirstPerson
             ? (flickAccum > 0 ? -1 : 1)
             : (flickAccum > 0 ?  1 : -1);
@@ -415,13 +279,6 @@ public class AutoLockOnHandler {
         try { camYawPre = api.getCameraYRot(); } catch (Throwable ignored) {}
         api.setNextLockOnTarget(flickDir);
 
-        // 1st person: jump most of the way toward the new target so the
-        // user perceives a clean swap, then let BLO's natural per-tick
-        // lerp (0.4 of remaining angle, clamped to 30deg) finish the
-        // last sliver. The blend factor is what controls the feel:
-        //   - 1.0 = pure instant snap (felt jarring earlier).
-        //   - 0.0 = pure BLO lerp (~10 ticks, felt like "head moving too much").
-        //   - 0.85 = a gentle ~3-tick (~150ms) ease into the final angle.
         if (isFirstPerson) {
             LivingEntity newTarget = api.getFocusingEntity();
             if (newTarget != null && newTarget.isAlive() && newTarget != currentTarget) {
@@ -434,8 +291,6 @@ public class AutoLockOnHandler {
                 float newYaw = (float)(Mth.atan2(tdz, tdx) * (180.0 / Math.PI)) - 90.0F;
                 float newPitch = (float)(-Mth.atan2(tdy, horiz) * (180.0 / Math.PI));
 
-                // Blend: snap to 85% of the way; let BLO's natural per-tick
-                // lerp finish the last 15% over ~3 ticks for a soft tail.
                 final float blend = 0.85F;
                 float oldYaw = camYawPre;
                 float oldPitch = newPitch;
@@ -445,13 +300,11 @@ public class AutoLockOnHandler {
 
                 try {
                     api.setCameraRotations(blendedPitch, blendedYaw, true);
-                } catch (Throwable ignored) {
-                    // Older EF versions may not have this exposed; fall through silently.
-                }
+                } catch (Throwable ignored) {}
             }
         }
 
-        settlingDelay = SETTLING_TICKS;
+        settlingDelay = 3;
         flickAccum = 0;
         flickCooldown = 4;  // BLO native uses 4 ticks
     }
@@ -461,20 +314,6 @@ public class AutoLockOnHandler {
         flickCooldown = 0;
     }
 
-    // =====================================================================
-    // Target scoring engine
-    // =====================================================================
-
-    /**
-     * Find the best lock-on candidate using cone alignment, distance, and
-     * continuity scoring. For flick-triggered switches, candidates in the
-     * wrong direction are excluded.
-     *
-     * @param player     the local player
-     * @param exclude    entity to exclude from candidates (current/dead target)
-     * @param flickDir   0 = no flick, 1 = right, -1 = left
-     * @param reference  the current target for directional comparison (null if none)
-     */
     private static LivingEntity findBestTarget(
         LocalPlayer player, LivingEntity exclude, int flickDir, LivingEntity reference
     ) {
@@ -496,9 +335,7 @@ public class AutoLockOnHandler {
             if (living instanceof Player playerTarget) {
                 if (getFilterPlayers()) continue;
                 if (getFilterFtbAllies()) {
-                    // Vanilla Scoreboard team check (always available).
                     if (player.isAlliedTo(playerTarget)) continue;
-                    // FTB Teams check (only when installed).
                     if (IntegrationRegistry.isFtbTeams()
                             && FTBTeamsIntegration.isAllyOrSameTeam(playerTarget)) continue;
                 }
@@ -530,7 +367,7 @@ public class AutoLockOnHandler {
 
         double dot = Mth.clamp(cameraForward.dot(toCandidate), -1.0, 1.0);
         double angle = Math.toDegrees(Math.acos(dot));
-        double coneScore = Math.max(0.0, 1.0 - (angle / MAX_CONE_ANGLE));
+        double coneScore = Math.max(0.0, 1.0 - (angle / 90.0));
 
         double dist = player.distanceTo(candidate);
         double distScore = Math.max(0.0, 1.0 - (dist / maxRange));
@@ -555,7 +392,7 @@ public class AutoLockOnHandler {
             coneScore = Math.max(0.0, 1.0 - (Math.abs(relAngle) / 180.0));
         }
 
-        return coneScore * CONE_WEIGHT + distScore * DIST_WEIGHT + contScore * CONT_WEIGHT;
+        return coneScore * 0.5 + distScore * 0.3 + contScore * 0.2;
     }
 
     private static float getYawToEntity(LocalPlayer player, Entity target) {
@@ -563,10 +400,6 @@ public class AutoLockOnHandler {
         double dz = target.getZ() - player.getZ();
         return (float)(Mth.atan2(dz, dx) * (180.0 / Math.PI)) - 90.0F;
     }
-
-    // =====================================================================
-    // Epic Fight integration via reflection
-    // =====================================================================
 
     private static void initReflection() {
         if (reflectionInitialized) return;

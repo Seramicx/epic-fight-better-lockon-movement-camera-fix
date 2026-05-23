@@ -7,12 +7,6 @@ import org.slf4j.Logger;
 import java.lang.reflect.Method;
 import java.util.Optional;
 
-/**
- * Bosses'Rise (block_factorys_bosses) integration. Every public method is a
- * no-op when Bosses'Rise is not installed (checked via
- * {@link IntegrationRegistry}). Reflection is resolved lazily on first call
- * and cached.
- */
 public final class BossesRiseIntegration {
 
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -42,11 +36,6 @@ public final class BossesRiseIntegration {
         }
     }
 
-    /**
-     * @return true if BR is loaded, the player has a {@code RollCap}, and that
-     *         cap reports {@code isRolling()}. Any reflection failure or absent
-     *         cap returns false.
-     */
     public static boolean isRolling(Player player) {
         resolve();
         if (player == null || fromPlayerMethod == null || isRollingMethod == null) return false;

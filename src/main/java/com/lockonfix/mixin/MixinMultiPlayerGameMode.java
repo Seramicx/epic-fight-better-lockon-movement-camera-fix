@@ -16,27 +16,6 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import yesman.epicfight.api.client.camera.EpicFightCameraAPI;
 
-/**
- * Makes the arrow/spell leave the bow in the direction of the TPS crosshair
- * (accounting for shoulder-offset parallax) <em>without</em> visibly rotating
- * the player's camera, head, or body.
- *
- * <p>The trick: right before the {@code RELEASE_USE_ITEM} packet is sent, we
- *
- * <ol>
- *   <li>snapshot {@code yRot}/{@code xRot}/{@code yHeadRot},</li>
- *   <li>call {@code alignPlayerLookToCrosshair(false, false, true)}: sets
- *       those three fields to aim at {@code crosshairHit − playerEye} and
- *       synchronously sends {@code ServerboundMovePlayerPacket.Rot}, but
- *       leaves the "previous tick" Os and {@code yBodyRot} alone,</li>
- *   <li>restore the three snapshot values.</li>
- * </ol>
- *
- * <p>The server receives the rotation packet, then the release packet, and
- * spawns the arrow with crosshair-corrected yaw. On the client, all three
- * writes happen inside one synchronous call with no render frame between
- * them, so the camera never visibly moves.
- */
 @Mixin(MultiPlayerGameMode.class)
 public abstract class MixinMultiPlayerGameMode {
 
@@ -64,10 +43,6 @@ public abstract class MixinMultiPlayerGameMode {
         }
         if (api == null) return;
 
-        // When locked on, lock-on auto-face has already aligned yRot to the target,
-        // so the release packet will fire toward the target. Forcing crosshair
-        // direction here would override that and shoot at the camera-hit point
-        // (typically just past the target due to shoulder offset) instead.
         if (api.isLockingOnTarget()) return;
 
         float origYRot = player.getYRot();

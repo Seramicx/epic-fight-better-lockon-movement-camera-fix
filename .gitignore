@@ -1,37 +1,13 @@
-# Gradle
 .gradle/
 build/
 out/
-
-# IDEs
 .idea/
 *.iml
 *.iws
-.project
-.classpath
-.settings/
-.vscode/
-
-# Forge
 run/
 run-server/
 run-client/
 logs/
 crash-reports/
-
-# OS Files
-.DS_Store
-Thumbs.db
-
-# IDE / build output
 bin/
-
-# Debug scripts and scratch work
 *.py
-*.patch
-*.sh
-docs/
-investigation_extracted/
-raw/
-release-notes-*.md
-minimal_logo.svg
