@@ -2,65 +2,62 @@
 
 ![Showcase](assets/showcase.gif)
 
-Souls-style movement, dodge, and aim fixes for Epic Fight. Better Lock On integration when installed.
-
-**This branch:** NeoForge 1.21.1 (latest: [neoforge-1.0.0](https://github.com/Seramicx/epic-fight-better-lockon-movement-camera-fix/releases/tag/neoforge-1.0.0))
-**Forge 1.20.1:** see the [`main`](https://github.com/Seramicx/epic-fight-better-lockon-movement-camera-fix/tree/main) branch.
+Movement, dodge, and aim fixes for Epic Fight lock-on. Better Lock On hooks in when that mod is present. Forge 1.20.1 and NeoForge 1.21.1.
 
 ## Features
 
-- 360-degree movement during lock-on. WASD always sends you in the right direction relative to the camera in every perspective (first person, vanilla third person, SSR), without dragging you toward the locked target.
-- Body smoothly rotates to face the camera direction while moving, instead of snapping every tick.
-- Dodge rolls go in the WASD direction relative to the camera, in every perspective.
-- Attack lunges connect with the locked target. (Vanilla Epic Fight sometimes starts the lunge from a stale facing angle and misses.)
-- Bow, crossbow, and trident shots release toward the crosshair in third person, not the player's body angle.
-- Use items (buckets, spawn eggs, fishing rod, Iron's Spells instant-cast items) fire toward the crosshair in third person, not the player's body angle.
-- Auto lock-on. Swinging at an unlocked enemy locks onto them. Toggleable via keybind.
-- Mouse-flick target switching. A quick mouse flick left or right cycles to the next target in that direction. Right-stick flick works with Controllable.
-- Body auto-faces the locked target while blocking or holding a charged spell.
-- Bosses' Rise compat: the BR roll uses WASD direction relative to the camera, the camera stays put during the roll, and the vanilla render is preserved.
+- WASD during lock-on moves relative to the camera in first person, vanilla third person, and SSR, without pulling you toward the target
+- Body turns toward camera direction while moving instead of snapping
+- Dodge rolls use WASD relative to the camera
+- Attack lunges hit the locked target (vanilla EF sometimes lunges from a stale facing and whiffs)
+- Auto lock-on when you swing at someone unlocked (toggle keybind)
+- Flick the mouse left/right to swap targets; Controllable right-stick flick works too
+- Body faces the locked target while blocking or charging a spell
+- Bosses' Rise: roll direction follows WASD vs camera; camera stays put; vanilla roll render kept
+- Bows, crossbows, and tridents shoot toward the crosshair in third person, not where the body is facing
+- Use items (buckets, eggs, fishing rod, Iron's instant casts) aim at the crosshair in third person
+- Valkyrien Skies 2 (Forge 1.20.1 only): lock-on facing still tracks the target on a moving ship
 
 ## Optional integrations
 
-Auto-detected if installed: Better Lockon, Iron's Spells 'n Spellbooks, Bosses' Rise, FTB Teams, Controllable. Each integration only turns on if the relevant mod is loaded.
+Better Lockon, Bosses' Rise, FTB Teams, Controllable, Valkyrien Skies 2 (Forge 1.20.1 only).
 
 ## Companion mods
 
-Camera, mount, ship, and F5 features live in separate mods. The companion mods listed below are currently Forge 1.20.1 only; NeoForge 1.21.1 ports are not yet available.
+Camera, mounts, ships, and F5 are separate downloads. Full set on Forge 1.20.1. NeoForge 1.21.1 has SSR Camera Fixes and Better Mount Steering so far.
 
-- [SSR: Camera Fixes & Additions](https://github.com/Seramicx/ssr-camera-fixes)
-- [Better Mount Steering](https://github.com/Seramicx/better-mount-steering)
-- [SSR x Valkyrien Skies Compat](https://github.com/Seramicx/ssr-vs-compat)
-- [Smooth F5](https://github.com/Seramicx/seramicx-smooth-f5)
+- [SSR: Camera Fixes & Additions](https://www.curseforge.com/minecraft/mc-mods/ssr-camera-fixes)
+- [Better Mount Steering](https://www.curseforge.com/minecraft/mc-mods/better-mount-steering)
+- SSR x Valkyrien Skies Compat (Forge 1.20.1 only)
+- Smooth F5 (Forge 1.20.1 only)
 
 ## Config
 
-`config/lockonmovementfix-client.toml` (generated on first launch):
+`config/lockonmovementfix-client.toml` (created on first launch):
 
-- `turnSpeed` - body lerp factor while moving (default `0.45`). Higher = body turns faster.
-- `idleTurnSpeed` - body lerp factor when standing still, blocking, or aiming (default `0.7`). Slightly faster than `turnSpeed` so the body settles quickly when you stop.
-- `autoFaceTarget` - whether the body auto-rotates toward the locked target while idle, blocking, or casting (default `true`).
-- `lockOnRange` - max lock-on distance in blocks (default `64`).
-- `filterPlayersFromAutoLockOn` - skip players when auto-lockon picks a target (default `true`).
-- `flickSensitivity` - mouse degrees needed to trigger a directional target switch (default `8`).
-- `filterTeamAllies` - skip vanilla scoreboard teammates and FTB Teams allies in target selection (default `true`).
+- `turnSpeed` - how fast the body turns while moving (default `0.45`)
+- `idleTurnSpeed` - turn speed when idle, blocking, or aiming (default `0.7`)
+- `autoFaceTarget` - face the locked target while idle/blocking/casting (default `true`)
+- `lockOnRange` - max lock distance in blocks (default `64`)
+- `filterPlayersFromAutoLockOn` - skip players for auto lock-on (default `true`)
+- `flickSensitivity` - mouse degrees to swap targets (default `8`)
+- `filterTeamAllies` - skip teammates and FTB allies (default `true`)
 
 ## Keybinds
 
-- Toggle Auto Lock-On - unbound by default. Set it under Controls > Lock-On Movement Fix.
+- Toggle Auto Lock-On - unbound by default (Controls > Lock-On Movement Fix)
 
 ## Requires
 
-- Minecraft 1.21.1
-- NeoForge 21.1.0+ (tested on 21.1.176)
-- Epic Fight (1.21.1 build)
+Forge 1.20.1: Minecraft 1.20.1, Forge 47+, Epic Fight 20.14.1+
+
+NeoForge 1.21.1: Minecraft 1.21.1, NeoForge 21.1.0+ (tested on 21.1.176), Epic Fight (1.21.1 build)
 
 ## Install
 
-1. Install NeoForge 21.1+ for Minecraft 1.21.1.
-2. Install Epic Fight (and any optional mods you want integrations for).
-3. Download the jar from the [neoforge-1.0.0 release](https://github.com/Seramicx/epic-fight-better-lockon-movement-camera-fix/releases/tag/neoforge-1.0.0).
-4. Drop it into your `mods/` folder.
+Forge: jar from [releases](https://github.com/Seramicx/epic-fight-better-lockon-movement-camera-fix/releases) on `main`.
+
+NeoForge: [neoforge-1.0.0](https://github.com/Seramicx/epic-fight-better-lockon-movement-camera-fix/releases/tag/neoforge-1.0.0) on branch `1.21.1-neoforge`.
 
 ## License
 
