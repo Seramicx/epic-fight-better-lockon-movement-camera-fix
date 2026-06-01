@@ -15,6 +15,8 @@ public final class IntegrationRegistry {
     private static boolean ftbTeams;
     private static boolean valkyrienSkies;
     private static boolean bossesRise;
+    private static boolean shoulderSurfing;
+    private static boolean ssrCameraFixes;
     private static boolean resolved = false;
 
     private IntegrationRegistry() {}
@@ -31,10 +33,12 @@ public final class IntegrationRegistry {
         ftbTeams        = mods.isLoaded("ftbteams");
         valkyrienSkies  = mods.isLoaded("valkyrienskies");
         bossesRise      = mods.isLoaded("block_factorys_bosses");
+        shoulderSurfing = mods.isLoaded("shouldersurfing");
+        ssrCameraFixes  = mods.isLoaded("ssrcamerafixes");
 
         LOGGER.info(
-            "Companion mods: BLO:{} epicfight_extra:{} IronsSpells:{} Controllable:{} FTBTeams:{} VS2:{} BossesRise:{}",
-            betterLockOn, epicFightExtra, ironsSpells, controllable, ftbTeams, valkyrienSkies, bossesRise);
+            "Companion mods: BLO:{} epicfight_extra:{} IronsSpells:{} Controllable:{} FTBTeams:{} VS2:{} BossesRise:{} SSR:{} SSRFixes:{}",
+            betterLockOn, epicFightExtra, ironsSpells, controllable, ftbTeams, valkyrienSkies, bossesRise, shoulderSurfing, ssrCameraFixes);
     }
 
     public static boolean isBetterLockOn()     { return resolved && betterLockOn; }
@@ -44,4 +48,6 @@ public final class IntegrationRegistry {
     public static boolean isFtbTeams()         { return resolved && ftbTeams; }
     public static boolean isValkyrienSkies()   { return resolved && valkyrienSkies; }
     public static boolean isBossesRise()       { return resolved && bossesRise; }
+    public static boolean isShoulderSurfing()  { return resolved && shoulderSurfing; }
+    public static boolean isSsrCameraFixes()   { return resolved && ssrCameraFixes; }
 }
