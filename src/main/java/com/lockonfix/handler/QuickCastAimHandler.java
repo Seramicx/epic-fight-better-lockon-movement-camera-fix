@@ -90,6 +90,10 @@ public final class QuickCastAimHandler {
             return;
         }
 
+        if (IntegrationRegistry.isSsrCameraFixes()) return;
+
+        try { api.postClientTick(); } catch (Throwable ignored) {}
+
         float origYRot = player.getYRot();
         float origXRot = player.getXRot();
         float origYHeadRot = player.getYHeadRot();
