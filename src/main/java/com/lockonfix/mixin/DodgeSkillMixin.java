@@ -1,5 +1,6 @@
 package com.lockonfix.mixin;
 
+import com.lockonfix.client.EpicFightClientHooks;
 import com.lockonfix.compat.ControllableIntegration;
 import com.lockonfix.compat.IntegrationRegistry;
 import net.minecraft.client.Minecraft;
@@ -47,6 +48,10 @@ public abstract class DodgeSkillMixin {
         SkillContainer container, ControlEngine controlEngine, CompoundTag arguments,
         CallbackInfo ci
     ) {
+        if (!EpicFightClientHooks.isLockOnTargeting()) {
+            return;
+        }
+
         LocalPlayerPatch patch;
         try {
             patch = container.getClientExecutor();
