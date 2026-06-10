@@ -23,6 +23,6 @@ public abstract class MixinMouseHandler {
 
     @Inject(method = "turnPlayer(D)V", at = @At("HEAD"))
     private void lockonfix$captureMouseDx(CallbackInfo ci) {
-        AutoLockOnHandler.recordMouseDx(this.accumulatedDX);
+        AutoLockOnHandler.INSTANCE.recordMouseDx(this.accumulatedDX);
     }
 }

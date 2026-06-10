@@ -1,7 +1,6 @@
 package com.lockonfix.handler;
 
 import com.lockonfix.FixConfig;
-import com.lockonfix.LockOnMovementFix;
 import com.lockonfix.client.EpicFightClientHooks;
 import com.lockonfix.compat.ControllableIntegration;
 import com.lockonfix.compat.IntegrationRegistry;
@@ -11,10 +10,8 @@ import net.minecraft.client.player.Input;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
-import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.MovementInputUpdateEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
@@ -29,15 +26,15 @@ import yesman.epicfight.client.world.capabilites.entitypatch.player.LocalPlayerP
  * {@code smoothedYRot} independent of what EF writes and re-apply it in both
  * {@code MovementInputUpdateEvent} and {@code PlayerTickEvent.Post}.
  */
-@EventBusSubscriber(modid = LockOnMovementFix.MOD_ID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
 public class LockOnMovementHandler {
 
-    private static final Minecraft MC = Minecraft.getInstance();
+    public static final LockOnMovementHandler INSTANCE = new LockOnMovementHandler();
 
     private static final float DEFAULT_TURN_SPEED = 0.45F;
     private static final float DEFAULT_IDLE_TURN_SPEED = 0.7F;
     private static final boolean DEFAULT_AUTO_FACE_TARGET = true;
 
+    // Cached singleton ref to Epic Fight's camera API (NOT a per-entity capability — the API singleton is stable across the session).
     private static EpicFightCameraAPI cachedAPI = null;
 
     private static float smoothedYRot = Float.NaN;
@@ -108,13 +105,14 @@ public class LockOnMovementHandler {
     }
 
     private static float[] readDirectionalInput(Input input) {
+        Minecraft mc = Minecraft.getInstance();
         float rawForward = 0;
-        if (MC.options.keyUp.isDown()) rawForward += 1.0F;
-        if (MC.options.keyDown.isDown()) rawForward -= 1.0F;
+        if (mc.options.keyUp.isDown()) rawForward += 1.0F;
+        if (mc.options.keyDown.isDown()) rawForward -= 1.0F;
 
         float rawStrafe = 0;
-        if (MC.options.keyLeft.isDown()) rawStrafe += 1.0F;
-        if (MC.options.keyRight.isDown()) rawStrafe -= 1.0F;
+        if (mc.options.keyLeft.isDown()) rawStrafe += 1.0F;
+        if (mc.options.keyRight.isDown()) rawStrafe -= 1.0F;
 
         // Controllable updates input.forwardImpulse/leftImpulse but not the
         // keyboard isDown() states, so the analog fallback fires correctly
@@ -128,9 +126,11 @@ public class LockOnMovementHandler {
         return new float[]{rawForward, rawStrafe};
     }
 
+    // LOWEST so this mod's movement-direction override applies after other input handlers
     @SubscribeEvent(priority = EventPriority.LOWEST)
-    public static void onMovementInput(MovementInputUpdateEvent event) {
-        LocalPlayer player = MC.player;
+    public void onMovementInput(MovementInputUpdateEvent event) {
+        Minecraft mc = Minecraft.getInstance();
+        LocalPlayer player = mc.player;
         if (player == null) return;
 
         EpicFightCameraAPI api = getAPI();
@@ -173,7 +173,7 @@ public class LockOnMovementHandler {
         // user still sees the target. Two different yRot values used at
         // two different times: tick-time for movement, frame-time for
         // camera.
-        boolean isFirstPerson = MC.options.getCameraType() == CameraType.FIRST_PERSON;
+        boolean isFirstPerson = mc.options.getCameraType() == CameraType.FIRST_PERSON;
         if (isFirstPerson) {
             wasLockedOn = true;
             Input fpInput = event.getInput();
@@ -213,7 +213,7 @@ public class LockOnMovementHandler {
                 float rawStrafe = dir[1];
                 float rawMagnitude = Mth.sqrt(rawForward * rawForward + rawStrafe * rawStrafe);
                 boolean isMoving = rawMagnitude > 0.01F;
-                boolean sprintHeld = MC.options.keySprint.isDown() && !MC.options.keyUse.isDown();
+                boolean sprintHeld = mc.options.keySprint.isDown() && !mc.options.keyUse.isDown();
 
                 if (sprintHeld && isMoving) {
                     // Sprint path: rotate yRot to movement direction so
@@ -398,10 +398,11 @@ public class LockOnMovementHandler {
      * the camera is pointing.
      */
     @SubscribeEvent
-    public static void onClientTickPost(ClientTickEvent.Post event) {
-        LocalPlayer player = MC.player;
+    public void onClientTickPost(ClientTickEvent.Post event) {
+        Minecraft mc = Minecraft.getInstance();
+        LocalPlayer player = mc.player;
         if (player == null) return;
-        if (MC.options.getCameraType() != CameraType.FIRST_PERSON) return;
+        if (mc.options.getCameraType() != CameraType.FIRST_PERSON) return;
         if (!IntegrationRegistry.isBetterLockOn()) return;
         EpicFightCameraAPI api = getAPI();
         if (api == null || !api.isLockingOnTarget()) return;
@@ -412,11 +413,12 @@ public class LockOnMovementHandler {
         } catch (Throwable ignored) {}
     }
 
+    // LOWEST so player-tick rotation override runs after EpicFight's tick logic
     @SubscribeEvent(priority = EventPriority.LOWEST)
-    public static void onPlayerTick(PlayerTickEvent.Post event) {
+    public void onPlayerTick(PlayerTickEvent.Post event) {
         if (!(event.getEntity() instanceof LocalPlayer)) return;
 
-        LocalPlayer player = MC.player;
+        LocalPlayer player = Minecraft.getInstance().player;
         if (player == null || event.getEntity() != player) return;
 
         // BLO handles yaw override; our smoothedYRot would be stale.

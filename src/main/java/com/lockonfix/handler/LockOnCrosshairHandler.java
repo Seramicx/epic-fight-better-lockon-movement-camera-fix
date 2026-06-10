@@ -14,6 +14,7 @@ public final class LockOnCrosshairHandler {
 
     private LockOnCrosshairHandler() {}
 
+    // HIGHEST so vanilla crosshair is hidden before other crosshair-rendering mods process the event
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onPreCrosshair(RenderGuiLayerEvent.Pre event) {
         if (!VanillaGuiLayers.CROSSHAIR.equals(event.getName())) return;

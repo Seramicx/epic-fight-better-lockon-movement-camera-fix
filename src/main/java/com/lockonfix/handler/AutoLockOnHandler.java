@@ -18,9 +18,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import org.slf4j.Logger;
 import yesman.epicfight.api.animation.types.EntityState;
@@ -43,35 +41,35 @@ import java.lang.reflect.Method;
  * <p>Integrates with Epic Fight via its public camera API plus reflection
  * for the private {@code setFocusingEntity}/{@code sendTargeting} methods.
  */
-@EventBusSubscriber(modid = LockOnMovementFix.MOD_ID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
 public class AutoLockOnHandler {
 
+    public static final AutoLockOnHandler INSTANCE = new AutoLockOnHandler();
+
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final Minecraft MC = Minecraft.getInstance();
 
     // =====================================================================
     // State
     // =====================================================================
 
-    private static boolean autoLockOnEnabled = false;
+    private boolean autoLockOnEnabled = false;
 
     /** Track lock-on state across ticks; only used for death detection */
-    private static boolean wasLockedOn = false;
-    private static LivingEntity lastKnownTarget = null;
+    private boolean wasLockedOn = false;
+    private LivingEntity lastKnownTarget = null;
 
     /** For continuity scoring (favors candidates near the previous target direction) */
-    private static LivingEntity previousTarget = null;
+    private LivingEntity previousTarget = null;
 
     /** After a target switch, ignore further switches for N ticks */
-    private static int settlingDelay = 0;
+    private int settlingDelay = 0;
     private static final int SETTLING_TICKS = 3;
 
     // =====================================================================
     // Flick detection (raw mouse, not player yaw)
     // =====================================================================
 
-    private static double flickAccum = 0.0;
-    private static int flickCooldown = 0;
+    private double flickAccum = 0.0;
+    private int flickCooldown = 0;
 
     private static final int FLICK_COOLDOWN_TICKS = 15;
     /** Per-tick contribution below this is treated as tremor (see mouseDxToYawDegrees). */
@@ -91,10 +89,10 @@ public class AutoLockOnHandler {
      * {@code ClientTickEvent.START}, which is racy across 1st/3rd person and
      * across Forge/vanilla tick interleaving.
      */
-    private static volatile double capturedMouseDx = 0.0;
+    private volatile double capturedMouseDx = 0.0;
 
     /** Called by MixinMouseHandler at HEAD of turnPlayer. */
-    public static void recordMouseDx(double dx) {
+    public void recordMouseDx(double dx) {
         capturedMouseDx = dx;
     }
 
@@ -126,9 +124,10 @@ public class AutoLockOnHandler {
     // API cache
     // =====================================================================
 
-    private static EpicFightCameraAPI cachedAPI = null;
+    // Cached singleton ref to Epic Fight's camera API (NOT a per-entity capability — the API singleton is stable across the session).
+    private EpicFightCameraAPI cachedAPI = null;
 
-    private static EpicFightCameraAPI getAPI() {
+    private EpicFightCameraAPI getAPI() {
         if (cachedAPI == null) {
             try { cachedAPI = EpicFightCameraAPI.getInstance(); }
             catch (Exception e) { return null; }
@@ -164,7 +163,7 @@ public class AutoLockOnHandler {
     // Public API
     // =====================================================================
 
-    public static boolean isAutoLockOnEnabled() {
+    public boolean isAutoLockOnEnabled() {
         return autoLockOnEnabled;
     }
 
@@ -189,18 +188,20 @@ public class AutoLockOnHandler {
     // =====================================================================
 
     @SubscribeEvent
-    public static void onClientTickPre(ClientTickEvent.Pre event) {
-        if (MC.player == null || MC.level == null) return;
-        if (MC.screen != null) return;
+    public void onClientTickPre(ClientTickEvent.Pre event) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.level == null) return;
+        if (mc.screen != null) return;
         // MouseHandler.turnPlayer() consumes accumulatedDX later this tick;
         // ClientTickEvent.Pre runs at the beginning of Minecraft.tick().
         handleFlickTickStart();
     }
 
     @SubscribeEvent
-    public static void onClientTickPost(ClientTickEvent.Post event) {
-        if (MC.player == null || MC.level == null) return;
-        if (MC.screen != null) return;
+    public void onClientTickPost(ClientTickEvent.Post event) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.level == null) return;
+        if (mc.screen != null) return;
 
         handleToggleKeybind();
 
@@ -238,7 +239,7 @@ public class AutoLockOnHandler {
         // locked on, no target, or neither auto-lockon nor the 1st-person
         // BLO-gap path is active. Gating on !autoLockOnEnabled alone would
         // kill accumulation in 1st person where the BLO-gap path runs.
-        boolean isFirstPerson = MC.options.getCameraType() == CameraType.FIRST_PERSON;
+        boolean isFirstPerson = mc.options.getCameraType() == CameraType.FIRST_PERSON;
         boolean bloGapInFirstPerson = isFirstPerson && IntegrationRegistry.isBetterLockOn();
         boolean flickActive = autoLockOnEnabled || bloGapInFirstPerson;
         if (!flickActive || !isLockedOn || currentTarget == null || !currentTarget.isAlive()) {
@@ -255,17 +256,18 @@ public class AutoLockOnHandler {
     // Toggle keybind
     // =====================================================================
 
-    private static void handleToggleKeybind() {
+    private void handleToggleKeybind() {
         if (LockOnMovementFix.TOGGLE_AUTO_LOCKON == null) return;
 
         while (LockOnMovementFix.TOGGLE_AUTO_LOCKON.consumeClick()) {
             autoLockOnEnabled = !autoLockOnEnabled;
 
-            if (MC.player != null) {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.player != null) {
                 Component status = autoLockOnEnabled
                     ? Component.literal("ON").withStyle(ChatFormatting.GREEN)
                     : Component.literal("OFF").withStyle(ChatFormatting.RED);
-                MC.player.displayClientMessage(
+                mc.player.displayClientMessage(
                     Component.literal("Auto Lock-On: ").append(status), true
                 );
             }
@@ -276,10 +278,10 @@ public class AutoLockOnHandler {
     // Target death/removal -> auto-switch
     // =====================================================================
 
-    private static void handleTargetLost(EpicFightCameraAPI api) {
+    private void handleTargetLost(EpicFightCameraAPI api) {
         previousTarget = lastKnownTarget;
 
-        LivingEntity best = findBestTarget(MC.player, lastKnownTarget, 0, null);
+        LivingEntity best = findBestTarget(Minecraft.getInstance().player, lastKnownTarget, 0, null);
         if (best != null) {
             setFocusingEntityReflect(api, best);
             if (!api.isLockingOnTarget()) {
@@ -318,7 +320,7 @@ public class AutoLockOnHandler {
         LOGGER.error("Auto lock-on: could not resolve MouseHandler horizontal cursor delta field; flick switching disabled");
     }
 
-    private static double readMouseAccumDx() {
+    private double readMouseAccumDx() {
         // capturedMouseDx is fed by MixinMouseHandler at HEAD of turnPlayer,
         // which is the only timing-safe place to read accumulatedDX before
         // vanilla zeroes it. Reflection fallback is kept for the case where
@@ -328,7 +330,7 @@ public class AutoLockOnHandler {
         initMouseReflection();
         if (mouseAccumDXField == null) return 0;
         try {
-            return mouseAccumDXField.getDouble(MC.mouseHandler);
+            return mouseAccumDXField.getDouble(Minecraft.getInstance().mouseHandler);
         } catch (Exception e) {
             return 0;
         }
@@ -338,26 +340,27 @@ public class AutoLockOnHandler {
      * Vanilla per-tick yaw delta from a horizontal cursor delta. Mirrors
      * MouseHandler.turnPlayer: f = sens*0.6+0.2, f1 = f*f*f*8, dy = dx*f1.
      */
-    private static double mouseDxToYawDegrees(double dx) {
+    private double mouseDxToYawDegrees(double dx) {
         if (dx == 0) return 0;
         if (Math.abs(dx) > MAX_MOUSE_DX_PER_TICK) return 0;
-        
-        // Use EXACT vanilla mouse math. Better Lockon passes this exact 
+
+        // Use EXACT vanilla mouse math. Better Lockon passes this exact
         // value into its own logic.
-        double sens = MC.options.sensitivity().get() * 0.6 + 0.2;
+        double sens = Minecraft.getInstance().options.sensitivity().get() * 0.6 + 0.2;
         double f1 = sens * sens * sens * 8.0;
-        return dx * f1; 
+        return dx * f1;
     }
 
     // =====================================================================
     // Flick tick (START phase only)
     // =====================================================================
 
-    private static void handleFlickTickStart() {
+    private void handleFlickTickStart() {
         EpicFightCameraAPI api = getAPI();
         if (api == null) return;
 
-        LocalPlayer player = MC.player;
+        Minecraft mc = Minecraft.getInstance();
+        LocalPlayer player = mc.player;
         boolean isLockedOn = api.isLockingOnTarget();
         LivingEntity currentTarget = api.getFocusingEntity();
         if (!isLockedOn || currentTarget == null || !currentTarget.isAlive()) return;
@@ -367,7 +370,7 @@ public class AutoLockOnHandler {
         //   - 1st person + BLO loaded: BLO's native flick is gated to non-FP
         //     in EpicFightCameraAPIMixin (cancel = cameraType != FIRST_PERSON
         //     && (TPS || locked)), so we cover the FP gap.
-        boolean isFirstPerson = MC.options.getCameraType() == CameraType.FIRST_PERSON;
+        boolean isFirstPerson = mc.options.getCameraType() == CameraType.FIRST_PERSON;
         boolean bloGapInFirstPerson = isFirstPerson && IntegrationRegistry.isBetterLockOn();
         if (!autoLockOnEnabled && !bloGapInFirstPerson) return;
         if (settlingDelay > 0) return;
@@ -458,7 +461,7 @@ public class AutoLockOnHandler {
         flickCooldown = 4;  // BLO native uses 4 ticks
     }
 
-    private static void resetFlickState() {
+    private void resetFlickState() {
         flickAccum = 0;
         flickCooldown = 0;
     }
@@ -477,17 +480,18 @@ public class AutoLockOnHandler {
      * @param flickDir   0 = no flick, 1 = right, -1 = left
      * @param reference  the current target for directional comparison (null if none)
      */
-    private static LivingEntity findBestTarget(
+    private LivingEntity findBestTarget(
         LocalPlayer player, LivingEntity exclude, int flickDir, LivingEntity reference
     ) {
         double maxRange = getLockOnRange();
-        Vec3 cameraForward = new Vec3(MC.gameRenderer.getMainCamera().getLookVector());
+        Minecraft mc = Minecraft.getInstance();
+        Vec3 cameraForward = new Vec3(mc.gameRenderer.getMainCamera().getLookVector());
         Vec3 playerEyePos = player.getEyePosition();
 
         LivingEntity bestCandidate = null;
         double bestScore = 0;
 
-        for (Entity entity : MC.level.entitiesForRendering()) {
+        for (Entity entity : mc.level.entitiesForRendering()) {
             if (!(entity instanceof LivingEntity living)) continue;
             if (living == player) continue;
             if (living == exclude) continue;
@@ -524,7 +528,7 @@ public class AutoLockOnHandler {
         return bestCandidate;
     }
 
-    private static double scoreCandidate(
+    private double scoreCandidate(
         LocalPlayer player, LivingEntity candidate, Vec3 cameraForward,
         Vec3 playerEyePos, double maxRange, int flickDir, LivingEntity reference
     ) {

@@ -9,6 +9,7 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.util.Mth;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -40,6 +41,8 @@ import yesman.epicfight.skill.dodge.DodgeSkill;
  * <p>Interaction with epicfight_extra: defers on digital input only; for
  * analog we run our own mixin to preserve 360 precision.
  */
+@Pseudo
+// priority 1100 so this mixin applies after EpicFight's own DodgeSkill mixins
 @Mixin(value = DodgeSkill.class, remap = false, priority = 1100)
 public abstract class DodgeSkillMixin {
 

@@ -2,6 +2,7 @@ package com.lockonfix.mixin;
 
 import net.minecraft.world.entity.LivingEntity;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -37,6 +38,7 @@ import yesman.epicfight.client.world.capabilites.entitypatch.player.LocalPlayerP
  * ticks have {@code yBodyRot = yRot} (forced by EpicFight's inaction logic),
  * so the lerp delta is zero and {@code modelYRot} stays on the target line.
  */
+@Pseudo
 @Mixin(value = LocalPlayerPatch.class, remap = false)
 public abstract class MixinFixAttackLungeDirection {
 

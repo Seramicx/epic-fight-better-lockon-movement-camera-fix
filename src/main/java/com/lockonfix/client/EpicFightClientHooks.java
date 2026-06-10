@@ -1,6 +1,5 @@
 package com.lockonfix.client;
 
-import com.lockonfix.LockOnMovementFix;
 import com.lockonfix.compat.IntegrationRegistry;
 import com.lockonfix.compat.IronSpellsIntegration;
 import net.minecraft.client.player.LocalPlayer;
@@ -8,9 +7,7 @@ import net.minecraft.world.item.BowItem;
 import net.minecraft.world.item.CrossbowItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TridentItem;
-import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import yesman.epicfight.api.client.camera.EpicFightCameraAPI;
 
@@ -23,8 +20,9 @@ import yesman.epicfight.api.client.camera.EpicFightCameraAPI;
  * bails during aim and Epic Fight's per-tick yRot correction stays in
  * effect.
  */
-@EventBusSubscriber(modid = LockOnMovementFix.MOD_ID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
 public final class EpicFightClientHooks {
+
+    public static final EpicFightClientHooks INSTANCE = new EpicFightClientHooks();
 
     private static final long CAST_LATCH_MS = 500L;
 
@@ -50,7 +48,7 @@ public final class EpicFightClientHooks {
     // =====================================================================
 
     @SubscribeEvent
-    public static void onClientTick(ClientTickEvent.Post event) {
+    public void onClientTick(ClientTickEvent.Post event) {
         if (!IntegrationRegistry.isIronsSpells()) return;
 
         if (IronSpellsIntegration.anyCastKeymapDown() || IronSpellsIntegration.isCasting()) {

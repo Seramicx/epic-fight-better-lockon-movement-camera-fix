@@ -34,6 +34,7 @@ import yesman.epicfight.api.client.camera.EpicFightCameraAPI;
  * back inside the same synchronous call, with no render frame in between,
  * so the camera and body never visibly rotate.
  */
+// priority 1500 so save/restore of player rotation wraps other mods' tick logic
 @Mixin(value = Minecraft.class, priority = 1500)
 public abstract class MixinMinecraft {
 

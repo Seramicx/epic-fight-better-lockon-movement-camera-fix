@@ -2,14 +2,14 @@
 
 ![Showcase](assets/showcase.gif)
 
-Movement, dodge, and aim fixes for Epic Fight lock-on. Better Lock On hooks in when that mod is present. Forge 1.20.1 and NeoForge 1.21.1.
+Movement, dodge, and aim fixes for Epic Fight lock-on. Better Lock On applies when that mod is installed. Forge 1.20.1 and NeoForge 1.21.1.
 
 ## Features
 
 - WASD during lock-on moves relative to the camera in first person, vanilla third person, and SSR, without pulling you toward the target
 - Body turns toward camera direction while moving instead of snapping
 - Dodge rolls use WASD relative to the camera
-- Attack lunges hit the locked target (vanilla EF sometimes lunges from a stale facing and whiffs)
+- Attack lunges hit the locked target (vanilla EF sometimes lunges from a stale facing and misses target)
 - Auto lock-on when you swing at someone unlocked (toggle keybind)
 - Flick the mouse left/right to swap targets; Controllable right-stick flick works too
 - Body faces the locked target while blocking or charging a spell

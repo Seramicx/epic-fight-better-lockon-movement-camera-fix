@@ -1,6 +1,10 @@
 package com.lockonfix;
 
+import com.lockonfix.client.EpicFightClientHooks;
 import com.lockonfix.compat.IntegrationRegistry;
+import com.lockonfix.handler.AutoLockOnHandler;
+import com.lockonfix.handler.LockOnMovementHandler;
+import com.lockonfix.handler.QuickCastAimHandler;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.KeyMapping;
@@ -10,6 +14,7 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
+import net.neoforged.neoforge.common.NeoForge;
 import org.slf4j.Logger;
 
 @Mod(LockOnMovementFix.MOD_ID)
@@ -26,7 +31,12 @@ public class LockOnMovementFix {
         modBus.addListener(this::onCommonSetup);
         modBus.addListener(this::onRegisterKeyMappings);
 
-        LOGGER.info("Epic Fight x Better Lock On: Movement Fixes (NeoForge 1.21.1) loaded.");
+        NeoForge.EVENT_BUS.register(AutoLockOnHandler.INSTANCE);
+        NeoForge.EVENT_BUS.register(LockOnMovementHandler.INSTANCE);
+        NeoForge.EVENT_BUS.register(QuickCastAimHandler.INSTANCE);
+        NeoForge.EVENT_BUS.register(EpicFightClientHooks.INSTANCE);
+
+        LOGGER.info("Lock-on movement fix loaded.");
     }
 
     private void onCommonSetup(FMLCommonSetupEvent event) {

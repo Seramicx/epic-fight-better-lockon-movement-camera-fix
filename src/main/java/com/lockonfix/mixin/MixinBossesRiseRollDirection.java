@@ -1,6 +1,5 @@
 package com.lockonfix.mixin;
 
-import com.lockonfix.compat.ControllableIntegration;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.Input;
 import org.spongepowered.asm.mixin.Mixin;
@@ -92,9 +91,6 @@ public class MixinBossesRiseRollDirection {
         // controller analog stick (Controllable) still works. Controllable
         // writes input.forwardImpulse/leftImpulse without flipping the
         // keyUp/keyDown booleans.
-        if (ControllableIntegration.isAnalogInput(input)) {
-            return forwardAxis ? input.forwardImpulse : input.leftImpulse;
-        }
         return forwardAxis ? input.forwardImpulse : input.leftImpulse;
     }
 }
