@@ -1,6 +1,5 @@
 package com.lockonfix.handler;
 
-import com.lockonfix.LockOnMovementFix;
 import com.lockonfix.compat.IntegrationRegistry;
 import com.lockonfix.compat.IronSpellsIntegration;
 import net.minecraft.client.CameraType;
@@ -9,22 +8,22 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
 import yesman.epicfight.api.client.camera.EpicFightCameraAPI;
 
-@Mod.EventBusSubscriber(modid = LockOnMovementFix.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
 public final class QuickCastAimHandler {
+
+    public static final QuickCastAimHandler INSTANCE = new QuickCastAimHandler();
 
     private QuickCastAimHandler() {}
 
     private static boolean lastAnyCastDown = false;
 
+    // HIGHEST so cast-key state is captured before Iron's Spells consumes the keypress
     @SubscribeEvent(priority = EventPriority.HIGHEST)
-    public static void onClientTickStart(TickEvent.ClientTickEvent event) {
+    public void onClientTickStart(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.START) return;
         if (!IntegrationRegistry.isIronsSpells()) {
             lastAnyCastDown = false;

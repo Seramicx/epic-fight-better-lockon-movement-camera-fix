@@ -18,10 +18,8 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
 import org.slf4j.Logger;
 import yesman.epicfight.api.animation.types.EntityState;
 import yesman.epicfight.api.client.camera.EpicFightCameraAPI;
@@ -31,27 +29,27 @@ import yesman.epicfight.client.world.capabilites.entitypatch.player.LocalPlayerP
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
-@Mod.EventBusSubscriber(modid = LockOnMovementFix.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
 public class AutoLockOnHandler {
 
+    public static final AutoLockOnHandler INSTANCE = new AutoLockOnHandler();
+
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final Minecraft MC = Minecraft.getInstance();
 
-    private static boolean autoLockOnEnabled = false;
+    private boolean autoLockOnEnabled = false;
 
-    private static boolean wasLockedOn = false;
-    private static LivingEntity lastKnownTarget = null;
+    private boolean wasLockedOn = false;
+    private LivingEntity lastKnownTarget = null;
 
-    private static LivingEntity previousTarget = null;
+    private LivingEntity previousTarget = null;
 
-    private static int settlingDelay = 0;
+    private int settlingDelay = 0;
 
-    private static double flickAccum = 0.0;
-    private static int flickCooldown = 0;
+    private double flickAccum = 0.0;
+    private int flickCooldown = 0;
 
-    private static volatile double capturedMouseDx = 0.0;
+    private volatile double capturedMouseDx = 0.0;
 
-    public static void recordMouseDx(double dx) {
+    public void recordMouseDx(double dx) {
         capturedMouseDx = dx;
     }
 
@@ -62,9 +60,10 @@ public class AutoLockOnHandler {
     private static Field mouseAccumDXField = null;
     private static boolean mouseReflectionInitialized = false;
 
-    private static EpicFightCameraAPI cachedAPI = null;
+    // Cached singleton ref to Epic Fight's camera API (NOT a per-entity capability — the API singleton is stable across the session).
+    private EpicFightCameraAPI cachedAPI = null;
 
-    private static EpicFightCameraAPI getAPI() {
+    private EpicFightCameraAPI getAPI() {
         if (cachedAPI == null) {
             try { cachedAPI = EpicFightCameraAPI.getInstance(); }
             catch (Exception e) { return null; }
@@ -92,7 +91,7 @@ public class AutoLockOnHandler {
         catch (Exception e) { return 64; }
     }
 
-    public static boolean isAutoLockOnEnabled() {
+    public boolean isAutoLockOnEnabled() {
         return autoLockOnEnabled;
     }
 
@@ -109,9 +108,10 @@ public class AutoLockOnHandler {
     }
 
     @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (MC.player == null || MC.level == null) return;
-        if (MC.screen != null) return;
+    public void onClientTick(TickEvent.ClientTickEvent event) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.level == null) return;
+        if (mc.screen != null) return;
 
         if (event.phase == TickEvent.Phase.START) {
             handleFlickTickStart();
@@ -149,7 +149,7 @@ public class AutoLockOnHandler {
             }
         }
 
-        boolean isFirstPerson = MC.options.getCameraType() == CameraType.FIRST_PERSON;
+        boolean isFirstPerson = Minecraft.getInstance().options.getCameraType() == CameraType.FIRST_PERSON;
         boolean bloGapInFirstPerson = isFirstPerson && IntegrationRegistry.isBetterLockOn();
         boolean flickActive = autoLockOnEnabled || bloGapInFirstPerson;
         if (!flickActive || !isLockedOn || currentTarget == null || !currentTarget.isAlive()) {
@@ -162,27 +162,28 @@ public class AutoLockOnHandler {
         }
     }
 
-    private static void handleToggleKeybind() {
+    private void handleToggleKeybind() {
         if (LockOnMovementFix.TOGGLE_AUTO_LOCKON == null) return;
 
         while (LockOnMovementFix.TOGGLE_AUTO_LOCKON.consumeClick()) {
             autoLockOnEnabled = !autoLockOnEnabled;
 
-            if (MC.player != null) {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.player != null) {
                 Component status = autoLockOnEnabled
                     ? Component.literal("ON").withStyle(ChatFormatting.GREEN)
                     : Component.literal("OFF").withStyle(ChatFormatting.RED);
-                MC.player.displayClientMessage(
+                mc.player.displayClientMessage(
                     Component.literal("Auto Lock-On: ").append(status), true
                 );
             }
         }
     }
 
-    private static void handleTargetLost(EpicFightCameraAPI api) {
+    private void handleTargetLost(EpicFightCameraAPI api) {
         previousTarget = lastKnownTarget;
 
-        LivingEntity best = findBestTarget(MC.player, lastKnownTarget, 0, null);
+        LivingEntity best = findBestTarget(Minecraft.getInstance().player, lastKnownTarget, 0, null);
         if (best != null) {
             setFocusingEntityReflect(api, best);
             if (!api.isLockingOnTarget()) {
@@ -217,13 +218,13 @@ public class AutoLockOnHandler {
         LOGGER.error("Auto lock-on: could not resolve MouseHandler horizontal cursor delta field; flick switching disabled");
     }
 
-    private static double readMouseAccumDx() {
+    private double readMouseAccumDx() {
         if (capturedMouseDx != 0.0) return capturedMouseDx;
 
         initMouseReflection();
         if (mouseAccumDXField == null) return 0;
         try {
-            return mouseAccumDXField.getDouble(MC.mouseHandler);
+            return mouseAccumDXField.getDouble(Minecraft.getInstance().mouseHandler);
         } catch (Exception e) {
             return 0;
         }
@@ -232,21 +233,22 @@ public class AutoLockOnHandler {
     private static double mouseDxToYawDegrees(double dx) {
         if (dx == 0) return 0;
         if (Math.abs(dx) > 1500.0) return 0;
-        double sens = MC.options.sensitivity().get() * 0.6 + 0.2;
+        double sens = Minecraft.getInstance().options.sensitivity().get() * 0.6 + 0.2;
         double f1 = sens * sens * sens * 8.0;
         return dx * f1;
     }
 
-    private static void handleFlickTickStart() {
+    private void handleFlickTickStart() {
         EpicFightCameraAPI api = getAPI();
         if (api == null) return;
 
-        LocalPlayer player = MC.player;
+        Minecraft mc = Minecraft.getInstance();
+        LocalPlayer player = mc.player;
         boolean isLockedOn = api.isLockingOnTarget();
         LivingEntity currentTarget = api.getFocusingEntity();
         if (!isLockedOn || currentTarget == null || !currentTarget.isAlive()) return;
 
-        boolean isFirstPerson = MC.options.getCameraType() == CameraType.FIRST_PERSON;
+        boolean isFirstPerson = mc.options.getCameraType() == CameraType.FIRST_PERSON;
         boolean bloGapInFirstPerson = isFirstPerson && IntegrationRegistry.isBetterLockOn();
         if (!autoLockOnEnabled && !bloGapInFirstPerson) return;
         if (settlingDelay > 0) return;
@@ -309,22 +311,23 @@ public class AutoLockOnHandler {
         flickCooldown = 4;  // BLO native uses 4 ticks
     }
 
-    private static void resetFlickState() {
+    private void resetFlickState() {
         flickAccum = 0;
         flickCooldown = 0;
     }
 
-    private static LivingEntity findBestTarget(
+    private LivingEntity findBestTarget(
         LocalPlayer player, LivingEntity exclude, int flickDir, LivingEntity reference
     ) {
         double maxRange = getLockOnRange();
-        Vec3 cameraForward = new Vec3(MC.gameRenderer.getMainCamera().getLookVector());
+        Minecraft mc = Minecraft.getInstance();
+        Vec3 cameraForward = new Vec3(mc.gameRenderer.getMainCamera().getLookVector());
         Vec3 playerEyePos = player.getEyePosition();
 
         LivingEntity bestCandidate = null;
         double bestScore = 0;
 
-        for (Entity entity : MC.level.entitiesForRendering()) {
+        for (Entity entity : mc.level.entitiesForRendering()) {
             if (!(entity instanceof LivingEntity living)) continue;
             if (living == player) continue;
             if (living == exclude) continue;
@@ -359,7 +362,7 @@ public class AutoLockOnHandler {
         return bestCandidate;
     }
 
-    private static double scoreCandidate(
+    private double scoreCandidate(
         LocalPlayer player, LivingEntity candidate, Vec3 cameraForward,
         Vec3 playerEyePos, double maxRange, int flickDir, LivingEntity reference
     ) {

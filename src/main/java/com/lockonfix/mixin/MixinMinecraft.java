@@ -16,6 +16,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import yesman.epicfight.api.client.camera.EpicFightCameraAPI;
 
+// priority 1500 so save/restore of player rotation wraps other mods' tick logic
 @Mixin(value = Minecraft.class, priority = 1500)
 public abstract class MixinMinecraft {
 

@@ -4,11 +4,13 @@ import com.lockonfix.compat.BossesRiseIntegration;
 import com.lockonfix.compat.IntegrationRegistry;
 import net.minecraft.client.player.LocalPlayer;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import yesman.epicfight.client.world.capabilites.entitypatch.player.LocalPlayerPatch;
 
+@Pseudo
 @Mixin(value = LocalPlayerPatch.class, remap = false)
 public abstract class MixinBossesRiseRollVanillaRender {
 

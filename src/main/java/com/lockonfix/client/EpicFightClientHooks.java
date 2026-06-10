@@ -1,6 +1,5 @@
 package com.lockonfix.client;
 
-import com.lockonfix.LockOnMovementFix;
 import com.lockonfix.compat.IntegrationRegistry;
 import com.lockonfix.compat.IronSpellsIntegration;
 import net.minecraft.client.player.LocalPlayer;
@@ -8,14 +7,13 @@ import net.minecraft.world.item.BowItem;
 import net.minecraft.world.item.CrossbowItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TridentItem;
-import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
 import yesman.epicfight.api.client.camera.EpicFightCameraAPI;
 
-@Mod.EventBusSubscriber(modid = LockOnMovementFix.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
 public final class EpicFightClientHooks {
+
+    public static final EpicFightClientHooks INSTANCE = new EpicFightClientHooks();
 
     private static long lastCastSignalMs = 0L;
 
@@ -31,7 +29,7 @@ public final class EpicFightClientHooks {
     }
 
     @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent event) {
+    public void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
         if (!IntegrationRegistry.isIronsSpells()) return;
 

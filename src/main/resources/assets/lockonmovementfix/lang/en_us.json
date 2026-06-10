@@ -1,5 +1,4 @@
 {
   "key.categories.lockonfix": "Lock-On Movement Fix",
-  "key.lockonfix.toggle_auto_lockon": "Toggle Auto Lock-On",
-  "key.lockonfix.shoulder_cycle": "Shoulder Cycle (Right / Left / Overhead)"
+  "key.lockonfix.toggle_auto_lockon": "Toggle Auto Lock-On"
 }

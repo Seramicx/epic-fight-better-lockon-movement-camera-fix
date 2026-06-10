@@ -1,6 +1,10 @@
 package com.lockonfix;
 
+import com.lockonfix.client.EpicFightClientHooks;
 import com.lockonfix.compat.IntegrationRegistry;
+import com.lockonfix.handler.AutoLockOnHandler;
+import com.lockonfix.handler.LockOnMovementHandler;
+import com.lockonfix.handler.QuickCastAimHandler;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.KeyMapping;
@@ -27,7 +31,11 @@ public class LockOnMovementFix {
         context.getModEventBus().addListener(this::onRegisterKeyMappings);
 
         MinecraftForge.EVENT_BUS.register(this);
-        LOGGER.info("Epic Fight x Better Lock On: Movement Fixes v2.0.0 loaded.");
+        MinecraftForge.EVENT_BUS.register(AutoLockOnHandler.INSTANCE);
+        MinecraftForge.EVENT_BUS.register(LockOnMovementHandler.INSTANCE);
+        MinecraftForge.EVENT_BUS.register(QuickCastAimHandler.INSTANCE);
+        MinecraftForge.EVENT_BUS.register(EpicFightClientHooks.INSTANCE);
+        LOGGER.info("Lock-on movement fix loaded.");
     }
 
     private void onCommonSetup(FMLCommonSetupEvent event) {
