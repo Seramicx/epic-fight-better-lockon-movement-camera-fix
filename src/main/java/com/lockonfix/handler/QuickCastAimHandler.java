@@ -1,5 +1,6 @@
 package com.lockonfix.handler;
 
+import com.lockonfix.client.EpicFightClientHooks;
 import com.lockonfix.compat.IntegrationRegistry;
 import com.lockonfix.compat.IronSpellsIntegration;
 import net.minecraft.client.CameraType;
@@ -97,7 +98,7 @@ public final class QuickCastAimHandler {
         float origXRot = player.getXRot();
         float origYHeadRot = player.getYHeadRot();
         try {
-            api.alignPlayerLookToCrosshair(false, false, true);
+            EpicFightClientHooks.alignLookForShot(api, player);
         } catch (Throwable ignored) {
         } finally {
             player.setYRot(origYRot);

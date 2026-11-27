@@ -2,11 +2,15 @@ package com.lockonfix.client;
 
 import com.lockonfix.compat.IntegrationRegistry;
 import com.lockonfix.compat.IronSpellsIntegration;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BowItem;
 import net.minecraft.world.item.CrossbowItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TridentItem;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import yesman.epicfight.api.client.camera.EpicFightCameraAPI;
@@ -46,6 +50,20 @@ public final class EpicFightClientHooks {
     // =====================================================================
     // Cast-state latch, refreshed every tick while any signal is on
     // =====================================================================
+
+    // EF picks with outline shapes from the camera, so grass or anything between the camera and the player can come back as the target
+    public static void alignLookForShot(EpicFightCameraAPI api, Player player) {
+        HitResult hit = api.getCrosshairHitResult();
+        if (hit != null) {
+            Vec3 toHit = hit.getLocation().subtract(player.getEyePosition());
+            Vec3 look = new Vec3(Minecraft.getInstance().gameRenderer.getMainCamera().getLookVector());
+            if (toHit.lengthSqr() < 2.25 || toHit.normalize().dot(look) < 0.1) {
+                api.alignPlayerLookToCameraRotation(false, false, true);
+                return;
+            }
+        }
+        api.alignPlayerLookToCrosshair(false, false, true);
+    }
 
     @SubscribeEvent
     public void onClientTick(ClientTickEvent.Post event) {
