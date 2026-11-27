@@ -1,6 +1,8 @@
 package com.lockonfix.mixin;
 
+import com.lockonfix.client.EpicFightClientHooks;
 import com.lockonfix.compat.IronSpellsIntegration;
+import com.lockonfix.compat.ShoulderSurfingIntegration;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
@@ -63,6 +65,7 @@ public abstract class MixinMinecraft {
 
         Minecraft mc = (Minecraft) (Object) this;
         if (mc.options.getCameraType() != CameraType.THIRD_PERSON_BACK) return;
+        if (ShoulderSurfingIntegration.isShoulderSurfing()) return;
 
         LocalPlayer player = mc.player;
         if (player == null) return;
@@ -88,7 +91,7 @@ public abstract class MixinMinecraft {
         lockonfix$shouldRestore = true;
 
         try {
-            api.alignPlayerLookToCrosshair(false, false, true);
+            EpicFightClientHooks.alignLookForShot(api, player);
         } catch (Throwable ignored) {
         }
     }

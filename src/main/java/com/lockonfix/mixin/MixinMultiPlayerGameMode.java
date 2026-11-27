@@ -1,6 +1,8 @@
 package com.lockonfix.mixin;
 
+import com.lockonfix.client.EpicFightClientHooks;
 import com.lockonfix.compat.IronSpellsIntegration;
+import com.lockonfix.compat.ShoulderSurfingIntegration;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
@@ -34,6 +36,8 @@ public abstract class MixinMultiPlayerGameMode {
         if (!isRanged) return;
 
         if (Minecraft.getInstance().options.getCameraType() != CameraType.THIRD_PERSON_BACK) return;
+        // SSR already turns the player to its own crosshair target for these
+        if (ShoulderSurfingIntegration.isShoulderSurfing()) return;
 
         EpicFightCameraAPI api;
         try {
@@ -50,7 +54,7 @@ public abstract class MixinMultiPlayerGameMode {
         float origYHeadRot = player.getYHeadRot();
 
         try {
-            api.alignPlayerLookToCrosshair(false, false, true);
+            EpicFightClientHooks.alignLookForShot(api, player);
         } catch (Throwable ignored) {
             return;
         } finally {
